@@ -54,6 +54,23 @@ bench_outputs/
 perf_outputs/
 # (scripts/perf_baseline.json is tracked intentionally)
 
+# ---- Local demo/bench artifacts (do not commit) ----
+_tmp_demo/
+_bench/
+proof/
+proofs/
+*.faiss
+*.faiss.meta.jsonl
+deploy/data/
+
+# ---- Node / UI artifacts ----
+node_modules/
+**/node_modules/
+opra/ui/node_modules/
+opra/ui/.cache/
+opra/ui/.next/
+opra/ui/dist/
+
 # ---- State / export artifacts (user generated) ----
 exports/
 *.npz
