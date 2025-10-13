@@ -1,6 +1,266 @@
 # Oscillink — Self‑Optimizing Coherent Memory for Embedding Workflows
 
 Build coherence into retrieval and generation. Deterministic receipts for every decision. Latency that scales gracefully with corpus size.
+<p align="center"><img alt="Oscillink" src="assets/oscillink_hero.png" width="640"/></p>
+
+<p align="center"><b>A physics‑inspired, model‑free coherence layer that transforms candidate embeddings into an explainable working‑memory state via convex energy minimization. Deterministic receipts for audit. Conjugate‑gradient solve with SPD guarantees.</b></p>
+<p align="center">
+	<a href="docs/API.md">API</a> ·
+	<a href="docs/foundations/MATH_OVERVIEW.md">Math</a> ·
+	<a href="docs/reference/RECEIPTS.md">Receipts</a> ·
+	<a href="benchmarks/">Benchmarks</a> ·
+	<a href="notebooks/">Notebooks</a> ·
+	<a href="https://github.com/Maverick0351a/oscillinkfirm">oscillinkfirm</a>
+</p>
+
+--- 
+
+## Contents
+- Overview
+- Quickstart
+- Oscillink Firm (Local LLM)
+- Adapters & Compatibility
+- Reproducibility
+- Performance
+- Method (Technical)
+- Deployment Options
+- Security, Privacy, Legal
+- Troubleshooting
+- Contributing & License
+- Changelog
+---
+Install: `pip install oscillink` · Docs: [API](docs/API.md) · Math: [Overview](docs/foundations/MATH_OVERVIEW.md) · Receipts: [Schema](docs/RECEIPTS.md)
+
+## Quickstart
+System requirements: Python 3.10–3.12, NumPy ≥ 1.22 (1.x/2.x supported). CPU only.
+
+## Oscillink Firm (Local LLM)
+
+What it is
+
+Oscillink Firm is a local retrieval + report system. It runs on a single machine or VM, indexes your firm’s documents (including scanned PDFs), and lets an LLM answer only from that private index. Nothing leaves your environment. Every answer ships a receipt (hashes, ΔH, CG residuals, abstain flags) so you can verify provenance.
+
+What problem it solves
+
+Most “RAG” tools phone home, hallucinate, and can’t prove where an answer came from. Oscillink Firm runs offline, declines to answer when the corpus can’t support it, and proves the source of every citation.
+
+How we solve it (succinct)
+
+- Ingest (local): OCR → chunk → embed → build vector index (JSONL/FAISS).
+- Retrieve (local): ANN recall → Oscillink Coherence Engine settles candidates into a coherent working memory.
+- Answer (local): Extractive synthesis by default; optional OpenAI‑compatible LLM running locally.
+- Receipts (local): Each response/report includes ΔH, CG iters/residual, file/index/model SHA‑256, and abstain flags if coherence is low.
+
+Data we index (no egress)
+
+- Scanned documents & images → OCR (Tesseract via OCRmyPDF).
+- PDFs (text) → pdfminer.six.
+- Office docs → DOCX, PPTX (paragraphs, slides, speaker notes).
+- Plain text & Markdown → .txt, .md (headings preserved).
+- Email archives → MBOX/EML (PST via offline export → EML), plus attachments.
+- Spreadsheets & CSV → XLSX/CSV (table, header-aware chunking with row‑level retrieval).
+- HTML/Confluence exports → saved pages or static export (readability‑style cleanse).
+- (Optional regulated formats) HL7 FHIR JSON / CDA excerpts, DICOM metadata (headers only; images omitted unless explicitly enabled).
+
+Access & safety
+
+- Bind to 127.0.0.1.
+- No runtime downloads; models verified by SHA‑256.
+- Role and matter filters on metadata to restrict retrieval scope.
+- Abstain when coherence < ε or top score < τ—no guessing.
+
+What to implement for maximum value (prioritized)
+
+Tier 0 — already high ROI (lock these)
+
+PDFs (text) + Scanned PDFs
+
+Extractors: pdfminer.six; OCRmyPDF (Tesseract).
+
+Deterministic chunking by headings/pages; include page numbers in metadata.
+
+DOCX, TXT/MD, PPTX
+
+Keep heading hierarchy; for PPTX include slide text + notes.
+
+Chunk by section/slide; attach section_title, slide_index.
+
+XLSX/CSV (table-aware)
+
+Parse headers, normalize types, one row = one retrievable unit with a compact text rendering.
+
+Include sheet, row_index, and key columns in metadata.
+
+Why: These cover 80% of firm knowledge and make your demos obviously useful.
+
+Tier 1 — unlock “hidden knowledge” (biggest next leap)
+
+Email archives with attachments (offline)
+
+Sources: MBOX/EML (and PST→EML via local export).
+
+Extract: subject, from/to/date, body, attachments (then push attachments back through the same ingest).
+
+Thread grouping: thread_id, message_index.
+
+High value because institutional memory often lives in email.
+
+HTML / Confluence static export
+
+Strip boilerplate; preserve heading hierarchy and table content.
+
+Tag with space, page_title, last_modified.
+
+Why: Captures “tribal knowledge” that never made it into PDFs.
+
+Tier 2 — regulated & specialized (offer as add‑ons)
+
+Healthcare
+
+FHIR JSON (e.g., DocumentReference, Observation, Condition) → index textual fields only; apply PHI tagging and policy filters.
+
+CDA (clinical notes) → text body only; redact detected PHI tokens as configured.
+
+DICOM → metadata headers only by default (PatientName/ID redacted or hashed).
+
+Legal / eDiscovery
+
+Load files (e.g., OPT/DAT) to reconstruct doc families; maintain family_id, bates ranges.
+
+Connect to on‑prem DMS exports (iManage/NetDocuments via filesystem export, not live API at first).
+
+Why: These win you specific industries without overhauling the core.
+
+Implementation details that matter (so it “just works”)
+
+Metadata schema (uniform across all connectors)
+
+collection, doc_id, chunk_id, source_type, path, title, author,
+created_at, modified_at, page_or_row, section, tags[],
+model_name, model_sha256, dim, file_sha256
+
+Add ACL tags: matter_id, client_id, department, role_required.
+
+Index filters: year, company/client, matter, document type.
+
+Deterministic ingest
+
+Stable ordering and tie‑breaks.
+
+Record exact parser/OCR versions and embed model hash in an IngestReceipt, chained into the SettleReceipt.
+
+Email specifics
+
+Normalize to UTF‑8, strip quoted reply blocks (keep one level optionally).
+
+Store message‑level embeddings and also attachment embeddings as separate chunks linked back to the parent message.
+
+De‑dup via content hash to avoid storing identical attachments.
+
+Spreadsheet specifics
+
+Respect header row; compact each row into “key=value” text with a max token budget; attach top 3 salient columns as facets for filtering.
+
+Add a table preview (first N rows) to the sidecar report for transparency.
+
+HTML/Confluence specifics
+
+Use readability‑style boilerplate removal; keep H1‑H3 hierarchy.
+
+Preserve code blocks and tables as plain text plus a small JSON “shape” in metadata.
+
+Regulated data controls
+
+PHI/PII detectors (local regex + small ML model if available) with three modes: tag, mask, block.
+
+Receipt flag: contains_phi: true|false with a count (no raw values in receipts).
+
+What not to do (now)
+
+Live IMAP/Graph connectors that require continuous network access—start with offline exports.
+
+Full DICOM pixel OCR—leave imaging to future modules; start with headers only.
+
+Complex collaborative editing—keep the UI minimal; focus on solid retrieval + receipts.
+
+“Most value” backlog (4‑week, aggressive)
+
+Week 1:
+
+Finalize PDFs (text+OCR), DOCX, TXT/MD, PPTX; uniform metadata; receipts chaining.
+
+Table‑aware CSV/XLSX (row retrievability + facets).
+
+Week 2:
+
+Email (MBOX/EML + attachments).
+
+HTML/Confluence static export.
+
+Week 3:
+
+ACL filters (matter/client/department) enforced at query time.
+
+Proof pack polishing: determinism tests and report sidecars for each connector.
+
+Week 4:
+
+Healthcare/legal add‑ons behind flags (FHIR/CDA text fields; DICOM metadata; eDiscovery load‑file mapping).
+
+Basic PHI/PII tag/mask/block policy.
+
+Acceptance on each item =
+
+deterministic ingest receipts,
+
+reproducible recall→settle latency within target,
+
+and abstain working when context is weak.
+
+How to frame this in the README (crisp)
+
+Local LLM on your firm’s data
+
+Oscillink Firm indexes your scanned documents, PDFs, Office files, emails (with attachments), spreadsheets/CSV, and HTML/Confluence exports—all on your hardware. The LLM answers only from this private index.
+Every answer includes a receipt with hashes and coherence metrics. If the corpus doesn’t support an answer, the system abstains.
+
+---
+
+See also: [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
+## Adapters & Compatibility
+
+---
+## Deployment Options
+
+### A. SDK (local)
+### B. Licensed container (customer‑managed)
+
+### C. Cloud API (beta)
+Cloud feature flags, quotas, and Stripe onboarding are documented under `docs/`:
+
+- Cloud architecture & ops: `docs/cloud/CLOUD_ARCH_GCP.md`, `docs/ops/REDIS_BACKEND.md`
+- Billing: `docs/billing/STRIPE_INTEGRATION.md`, `docs/billing/PRICING.md`
+## Security, Privacy, Legal
+
+Policies: [Security](SECURITY.md) · [Privacy](docs/product/PRIVACY.md) · [Terms](docs/product/TERMS.md) · [License](LICENSE) · [Patent notice](PATENTS.md)
+## Troubleshooting
+
+---
+## Contributing & License
+
+---
+## Changelog
+
+---
+## Appendix: Datasets and Notebooks
+
+---
+## Pricing (licensed container)
+
+---
+## References
+
+Build coherence into retrieval and generation. Deterministic receipts for every decision. Latency that scales gracefully with corpus size.
 
 <p align="left">
 	<a href="https://github.com/Maverick0351a/Oscillink/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Maverick0351a/Oscillink/actions/workflows/ci.yml/badge.svg?branch=main"/></a>
@@ -17,8 +277,6 @@ Build coherence into retrieval and generation. Deterministic receipts for every 
 	<sub>CI: Python 3.10–3.12 × NumPy 1.x/2.x</sub>
 
 </p>
-
-<p align="center"><img alt="Oscillink" src="assets/oscillink_hero.png" width="640"/></p>
 
 <p align="center">
   <a href="https://pypi.org/project/oscillink/"><img alt="pip install oscillink" src="https://img.shields.io/badge/pip%20install-oscillink-3776AB?logo=pypi&logoColor=white"/></a>
@@ -91,7 +349,7 @@ Build coherence into retrieval and generation. Deterministic receipts for every 
 
 Abstract. Oscillink is a physics‑inspired, model‑free coherence layer that transforms a set of candidate embeddings into an explainable working‑memory state by minimizing a strictly convex energy on a mutual‑kNN lattice. The system solves a symmetric positive‑definite (SPD) linear system via preconditioned conjugate gradients (CG), returning (i) refined embeddings U*, (ii) a deterministic, signed “receipt” with energy improvement ΔH, and (iii) per‑edge/null‑point diagnostics. No training is required; your embeddings are the model.
 
-Install: `pip install oscillink` · Docs: [API](docs/reference/API.md) · Math: [Overview](docs/foundations/MATH_OVERVIEW.md) · Receipts: [Schema](docs/reference/RECEIPTS.md)
+Install: `pip install oscillink` · Docs: [API](docs/API.md) · Math: [Overview](docs/foundations/MATH_OVERVIEW.md) · Receipts: [Schema](docs/RECEIPTS.md)
 
 ---
 
@@ -325,76 +583,6 @@ Cloud feature flags, quotas, and Stripe onboarding are documented under `docs/`:
 ## Security, Privacy, Legal
 
 - Local SDK: does not transmit embeddings/content anywhere.
-- Cloud API: processes only request payloads; no training/retention beyond request lifecycle unless explicit caching is enabled.
-- Receipts: contain derived numeric metrics and a state checksum; not raw content.
-- Webhooks: keep `OSCILLINK_ALLOW_UNVERIFIED_STRIPE=0` in production and set `STRIPE_WEBHOOK_SECRET`.
-
-Policies: [Security](SECURITY.md) · [Privacy](docs/product/PRIVACY.md) · [Terms](docs/product/TERMS.md) · [License](LICENSE) · [Patent notice](PATENTS.md)
-
-Patent & OSS usage (FAQ). Oscillink is open‑source (Apache‑2.0). Apache‑2.0 includes an explicit patent license to practice the contributed Work. Our filing is primarily defensive.
-
----
-
-## Troubleshooting
-
-- 422 Unprocessable Entity: ensure `Y: (N,D)` and `psi: (D,)` with finite float32 values.
-- 403 Unauthorized: missing/invalid `X-API-Key` or suspended key.
-- 429 Too Many Requests: rate/quota exceeded; see `X-Quota-*`, `X-RateLimit-*`, `X-IPLimit-*` headers (and `X-Monthly-*` if enabled).
-- Webhook signature error: verify `STRIPE_WEBHOOK_SECRET`, server clock, and `OSCILLINK_STRIPE_MAX_AGE`.
-- Redis not used: set `OSCILLINK_STATE_BACKEND=redis` and `OSCILLINK_REDIS_URL` (or `REDIS_URL`).
-
----
-
-## Contributing & License
-
-- License: Apache‑2.0 (see `LICENSE`)
-- Contributions welcome (see `CONTRIBUTING.md`)
-- Code of Conduct: `CODE_OF_CONDUCT.md`
-
-Support & contacts. General: contact@oscillink.com · Security: security@oscillink.com · Founder: travisjohnson@oscillink.com. Brand: Oscillink is a brand of Odin Protocol Inc.
-
----
-
-## Changelog
-
-See `CHANGELOG.md` for release notes. Status: API v1 (stable) · Cloud: beta.
-
----
-
-## Appendix: Datasets and Notebooks
-
-Controlled “facts + traps” dataset and notebook are provided to demonstrate controllability/auditability:
-
-- Notebook: `notebooks/04_hallucination_reduction.ipynb`
-- Dataset card (N, k, trials, seed) and CLI plot script: `assets/benchmarks/` and `scripts/plot_benchmarks.py`
-
----
-
-## Pricing (licensed container)
-
-Simple, per‑container licensing with an enterprise cluster option (see details in `docs/billing/PRICING.md`):
-
-- Starter: $49/container
-- Team: $199/container
-- Scale Pack: $699 (5 containers)
-- Enterprise: $2k–$6k/cluster
-
-Dev (free) for labs/evaluation with caps; annual discount available.
-
-Notes on evaluation design: the hallucination/trap studies are synthetic/controlled and intended to validate auditability and controls, not to claim universal guarantees. For production, validate on your own corpus using the provided harness and receipts.
-
----
-
-## References
-
-- Math & foundations: `docs/foundations/MATH_OVERVIEW.md`, `docs/foundations/PHYSICS_FOUNDATIONS.md`
-- Receipts: `docs/reference/RECEIPTS.md`, `docs/reference/RECEIPT_SCHEMA.md`
-- API reference and OpenAPI baseline: `docs/reference/API.md`, `openapi_baseline.json`
-- Benchmarks & scripts: `benchmarks/`, `scripts/`, `examples/`, `notebooks/`
-
-Acknowledgments: This repository uses standard sparse linear algebra techniques (mutual‑kNN graphs, Laplacians, SPD solvers) adapted for explainable coherence in embedding workflows.
-
-Contact: For design‑partner inquiries (on‑prem container, regulated deployments): contact@oscillink.com.
 
 ---
 
