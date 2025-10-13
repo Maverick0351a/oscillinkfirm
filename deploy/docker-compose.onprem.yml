@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.onprem
+    image: oscillink/onprem:local
+    environment:
+      # Enable deterministic ingest by default; can be overridden
+      OSC_DETERMINISTIC: "1"
+      # Point to Tika sidecar for extraction when using --extract-parser tika|auto
+      OSC_TIKA_URL: "http://tika:9998"
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data
+    depends_on:
+      - tika
+    # Default command is idle; use `docker compose run app` to execute CLI
+    command: ["sleep", "infinity"]
+
+  tika:
+    image: ghcr.io/apache/tika:3.0.0
+    ports:
+      - "9998:9998"
+    # Tika exposes 9998 by default; healthcheck omitted for portability
+
+volumes:
+  data:
+    driver: local

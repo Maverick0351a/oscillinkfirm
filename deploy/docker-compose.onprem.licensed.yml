@@ -1,0 +1,44 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.onprem.licensed
+    image: oscillink/onprem-licensed:local
+    environment:
+      OSC_DETERMINISTIC: "1"
+      OSC_TIKA_URL: "http://tika:9998"
+      # License verification settings
+      OSCILLINK_LICENSE_PATH: "/run/secrets/oscillink.lic"
+      OSCILLINK_JWKS_URL: "https://license.oscillink.com/.well-known/jwks.json"
+      # Optional JWT expectations
+      # OSCILLINK_JWT_ISS: "https://license.oscillink.com"
+      # OSCILLINK_JWT_AUD: "oscillink"
+      # OSCILLINK_JWT_LEEWAY: "300"
+      # OSCILLINK_JWKS_TTL: "3600"
+      # OSCILLINK_JWKS_OFFLINE_GRACE: "86400"
+    volumes:
+      - type: bind
+        source: ./license
+        target: /run/secrets
+      - type: bind
+        source: ./data
+        target: /data
+    depends_on:
+      - tika
+    # license entrypoint runs; keep container idle until you run a job
+    command: ["sleep", "infinity"]
+
+  tika:
+    image: apache/tika:2.9.0
+    ports:
+      - "9998:9998"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9998"]
+      interval: 20s
+      timeout: 5s
+      start_period: 15s
+
+volumes:
+  data:
+    driver: local

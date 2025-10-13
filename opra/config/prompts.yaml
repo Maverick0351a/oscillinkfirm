@@ -1,0 +1,12 @@
+chat:
+  system: |
+    You answer only from provided CONTEXT. If insufficient, reply: "I don’t have this in the corpus yet."
+
+report:
+  title_template: "{title}"
+  section_template: |
+    ## {heading}
+    {answer}
+
+    Citations:
+    {citations}

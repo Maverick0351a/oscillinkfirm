@@ -1,0 +1,30 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    OSC_DETERMINISTIC=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    OMP_NUM_THREADS=1
+
+# System deps: build tools, OCR, optional weasyprint deps kept minimal for now
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    tesseract-ocr \
+    libtesseract-dev \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy only OPRA api into container
+COPY api /app/api
+COPY config /app/config
+
+# Install oscillink package locally from parent if available (mount suggested at runtime) or fallback to pip if published later
+# For now, install minimal runtime deps used by API
+RUN pip install --no-cache-dir fastapi uvicorn[standard] httpx pydantic
+
+EXPOSE 8080
+CMD ["uvicorn","api.app:app","--host","127.0.0.1","--port","8080"]

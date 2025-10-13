@@ -1,0 +1,98 @@
+# ---- Python bytecode / caches ----
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ---- Virtual environments ----
+# common venv names (folders)
+.venv/
+.venv*/
+venv/
+venv*/
+env/
+env*/
+# poetry/pipenv/conda markers and dotenv files
+.python-version
+.pdm-python
+.pdm.toml
+Pipfile
+Pipfile.lock
+poetry.lock
+.conda/
+conda-meta/
+.env
+.env.*
+.envrc
+.direnv/
+
+# ---- Packaging / build artifacts ----
+build/
+dist/
+*.egg-info/
+.eggs/
+wheelhouse/
+sdist/
+*.whl
+
+# ---- Test / coverage artifacts ----
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# ---- Logs & profiling ----
+*.log
+*.prof
+*.perf.json
+
+# ---- Bench / perf scratch outputs (keep baseline JSON committed) ----
+bench_outputs/
+perf_outputs/
+# (scripts/perf_baseline.json is tracked intentionally)
+
+# ---- State / export artifacts (user generated) ----
+exports/
+*.npz
+state_*.json
+
+# ---- Editor / IDE ----
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# ---- OS noise ----
+.DS_Store
+Thumbs.db
+Oscillink final.svg
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+.jupyter/
+**/.ipynb_checkpoints/
+
+# ---- Misc ----
+.cache/
+.tmp/
+*.tmp
+tmp/
+temp/
+~$*
+
+# End of .gitignore
+
+# ---- Secrets / local env files (do not commit) ----
+cloud/env.private.yaml
+cloud/env.stripe.yaml
+cloud/env.all.yaml
+cloud/whsec.txt
+trusted.env
+trusted.yaml
+
+# ---- Local git backup (do not commit) ----
+.git.backup/

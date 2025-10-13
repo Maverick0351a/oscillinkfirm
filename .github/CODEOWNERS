@@ -1,0 +1,9 @@
+# CODEOWNERS
+# Lines of the form:
+#   pattern  @owner1 @owner2
+# Fallback owner for everything:
+*       @Maverick0351a
+
+# Example granular ownership (uncomment / adjust as needed):
+# docs/*   @Maverick0351a @another-collaborator
+# scripts/* @Maverick0351a

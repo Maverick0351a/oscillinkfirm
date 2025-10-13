@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://oscillink.ai/schemas/ingest_receipt.schema.json",
+  "title": "IngestReceipt",
+  "type": "object",
+  "required": [
+    "version",
+    "input_path",
+    "chunks",
+    "index_path",
+    "index_sha256",
+    "embed_model"
+  ],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "input_path": { "type": "string" },
+    "chunks": { "type": "integer", "minimum": 0 },
+    "index_path": { "type": "string" },
+    "index_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "embed_model": { "type": "string" },
+    "meta": { "type": "object", "additionalProperties": true }
+  },
+  "additionalProperties": false
+}

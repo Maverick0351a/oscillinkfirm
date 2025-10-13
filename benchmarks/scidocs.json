@@ -1,0 +1,20 @@
+{
+  "dataset": "beir/scidocs",
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "top_k": 10,
+  "kneighbors": 6,
+  "metrics": {
+    "cosine": {
+      "ndcg@10": 0.019103397448479192,
+      "recall@50": 0.0215
+    },
+    "oscillink": {
+      "ndcg@10": 0.016768252052377555,
+      "recall@50": 0.0215
+    }
+  },
+  "counts": {
+    "docs": 25657,
+    "queries": 100
+  }
+}

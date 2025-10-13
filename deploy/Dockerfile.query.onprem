@@ -1,0 +1,31 @@
+# Minimal on‑prem HTTP query service container (CPU)
+# Exposes FastAPI app wrapping JSONL/FAISS query over prebuilt indices
+
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    UVICORN_HOST=0.0.0.0 \
+    UVICORN_PORT=8080
+
+# System deps (none heavy; keep minimal). Add libgomp1 in case faiss-cpu uses OpenMP.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy project metadata and source
+COPY pyproject.toml README.md /app/
+COPY oscillink /app/oscillink
+COPY examples /app/examples
+
+# Install package with cloud extras (FastAPI, uvicorn, etc.)
+RUN pip install --upgrade pip \
+    && pip install -e .[cloud] \
+    && python -c "import oscillink; import sys; print('oscillink', oscillink.__version__, 'py', sys.version)"
+
+EXPOSE 8080
+
+CMD ["uvicorn", "examples.query_server:app", "--host", "0.0.0.0", "--port", "8080"]

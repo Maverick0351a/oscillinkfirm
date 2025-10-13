@@ -1,0 +1,3 @@
+Oscillink is a coherent memory engine.
+Embedding models provide anchors.
+This is a simple sample document.

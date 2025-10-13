@@ -1,0 +1,19 @@
+{
+  "config": {
+    "backend": "jsonl",
+    "k": 5,
+    "embed_model": "bge-small-en-v1.5",
+    "e2e": false,
+    "mode": "http",
+    "url": "http://localhost:8080/v1/query"
+  },
+  "results": {
+    "count": 20.0,
+    "p50_ms": 12.821599986637011,
+    "p95_ms": 31.457699980819598,
+    "p99_ms": 31.797000003280118,
+    "avg_ms": 14.923865000309888,
+    "min_ms": 9.860599995590746,
+    "max_ms": 31.797000003280118
+  }
+}

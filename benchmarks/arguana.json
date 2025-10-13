@@ -1,0 +1,20 @@
+{
+  "dataset": "beir/arguana",
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "top_k": 10,
+  "kneighbors": 6,
+  "metrics": {
+    "cosine": {
+      "ndcg@10": 0.024403509477528094,
+      "recall@50": 0.051209103840682786
+    },
+    "oscillink": {
+      "ndcg@10": 0.02064742629094506,
+      "recall@50": 0.051209103840682786
+    }
+  },
+  "counts": {
+    "docs": 8674,
+    "queries": 100
+  }
+}

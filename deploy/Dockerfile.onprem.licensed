@@ -1,0 +1,45 @@
+# Licensed on‑prem ingest Dockerfile (CPU)
+# Provides OCR, PDF extraction, Unstructured chunking, FAISS, and Sentence-Transformers embeddings.
+FROM python:3.11-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    OSC_DETERMINISTIC=1 \
+    OSCILLINK_LICENSE_PATH=/run/secrets/oscillink.lic \
+    OSCILLINK_JWKS_URL=https://license.oscillink.com/.well-known/jwks.json
+
+WORKDIR /app
+
+# System deps for OCR/PDF and ops
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl bash \
+    ocrmypdf tesseract-ocr tesseract-ocr-eng \
+    qpdf ghostscript pngquant poppler-utils \
+    file && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy project sources and tools
+COPY pyproject.toml README.md ./
+COPY oscillink ./oscillink
+COPY tools ./tools
+COPY cloud/entrypoint.sh /app/entrypoint_api.sh
+COPY cloud/entrypoint_ingest.sh /app/entrypoint_ingest.sh
+COPY models_registry.json /app/models_registry.json
+COPY models /app/models
+
+# Install Python deps: core package + extras for embeddings and backends + crypto for license verify
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir . && \
+    pip install --no-cache-dir \
+        sentence-transformers>=2.2.2 \
+        huggingface-hub>=0.20 \
+        pdfminer.six \
+        unstructured \
+        faiss-cpu \
+        cryptography>=42.0
+
+RUN chmod +x /app/entrypoint_ingest.sh || true
+
+# Default to the ingest entrypoint which verifies license then execs the command
+ENTRYPOINT ["/app/entrypoint_ingest.sh"]
+CMD ["sleep", "infinity"]

@@ -1,0 +1,162 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oscillink"
+version = "0.1.13"
+description = "Oscillink Lattice — Short-Term Coherence SDK (physics-inspired memory for generative models)"
+authors = [{name="Oscillink", email="contact@oscillink.com"}]
+maintainers = [{name = "Travis Johnson", email = "travisjohnson@oscillink.com"}]
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+dependencies = [
+  "numpy>=1.22,<3.0",
+  "typing_extensions>=4.7"
+]
+keywords = ["graph", "lattice", "memory", "retrieval", "ai", "ml", "coherence", "physics-inspired"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3 :: Only",
+  "Operating System :: OS Independent",
+  "Typing :: Typed"
+]
+
+[project.urls]
+Homepage = "https://github.com/Maverick0351a/Oscillink"
+Documentation = "https://github.com/Maverick0351a/Oscillink#quickstart"
+Source = "https://github.com/Maverick0351a/Oscillink"
+Issues = "https://github.com/Maverick0351a/Oscillink/issues"
+Changelog = "https://github.com/Maverick0351a/Oscillink/blob/main/CHANGELOG.md"
+Security = "https://github.com/Maverick0351a/Oscillink/blob/main/SECURITY.md"
+Support = "https://github.com/Maverick0351a/Oscillink/blob/main/SUPPORT.md"
+Funding = "https://buy.stripe.com/7sY9AUbcK1if2y6d2g2VG08"
+Terms = "https://github.com/Maverick0351a/Oscillink/blob/main/docs/product/TERMS.md"
+Privacy = "https://github.com/Maverick0351a/Oscillink/blob/main/docs/product/PRIVACY.md"
+DPA = "https://github.com/Maverick0351a/Oscillink/blob/main/docs/billing/DPA.md"
+
+[project.scripts]
+oscillink = "oscillink.cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0",
+  "pytest-cov>=4.1",
+  "ruff>=0.5.0",
+  "mypy>=1.5",
+  "pre-commit>=3.7",
+  "fastapi>=0.111",
+  "httpx>=0.27",
+  "orjson>=3.9",
+  "python-multipart>=0.0.6",
+  "prometheus-client>=0.20",
+  "matplotlib>=3.7"
+]
+bench = [
+  "sentence-transformers>=2.2.2",
+  "ir_datasets>=0.5.5",
+  "ranx>=0.3.20",
+  "tqdm>=4.66"
+]
+embed = [
+  "sentence-transformers>=2.2.2",
+  "huggingface-hub>=0.20"
+]
+cloud = [
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+  "gunicorn>=21.0",
+  "redis>=5.0",
+  "pydantic>=2.5",
+  "orjson>=3.9",
+  "python-multipart>=0.0.6",
+  "prometheus-client>=0.20"
+]
+billing = [
+  "stripe>=10.0",
+  "google-cloud-firestore>=2.16"
+]
+cloud-all = [
+  # Unified set of dependencies from 'cloud' and 'billing' (avoid recursive self reference)
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+  "gunicorn>=21.0",
+  "redis>=5.0",
+  "pydantic>=2.5",
+  "orjson>=3.9",
+  "python-multipart>=0.0.6",
+  "prometheus-client>=0.20",
+  "stripe>=10.0",
+  "google-cloud-firestore>=2.16"
+]
+
+[tool.setuptools.packages.find]
+include = ["oscillink*", "cloud*"]
+
+[tool.setuptools.package-data]
+oscillink = [
+  "py.typed",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = [
+  "**/*.ipynb",  # exclude Jupyter notebooks from linting
+]
+
+[tool.ruff.lint]
+select = ["E","F","I","UP","B","N","SIM","C90"]
+# Ignore selected modernizations we defer (keep some explicit typing imports, etc.)
+ignore = [
+  "N802","N803","N806",  # naming
+  "N815",  # allow lamG/lamC/lamQ/lamP parameter style (domain-specific symbols)
+  "UP035","UP006","UP037","UP045","UP038",  # selectively keep some typing modernizations disabled
+  "B905",  # don't require zip(strict=) yet in all examples/scripts
+  "B008",  # FastAPI Depends pattern acceptable for this project
+  "SIM105","SIM910",  # optional stylistic simplifications
+  "E501"  # allow longer lines (benchmark/log payload clarity & doc tables); revisit later
+]
+
+[tool.ruff.lint.per-file-ignores]
+"notebooks/*.ipynb" = ["E402","E741","F401","F821","F811"]
+"scripts/benchmark.py" = ["C901"]
+"scripts/proof_hallucination.py" = ["C901"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_ignores = true
+pretty = true
+
+[tool.pytest.ini_options]
+filterwarnings = [
+  "ignore:Please use `import python_multipart` instead\\.:PendingDeprecationWarning:starlette.formparsers",
+]
+
+[[tool.mypy.overrides]]
+# sentence-transformers is an optional runtime dependency for embeddings; we fall back when absent.
+# In CI we don't install it, so silence missing type stub/library errors for this module only.
+module = [
+  "sentence_transformers",
+  "sentence_transformers.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# FAISS is an optional backend; ignore missing import errors when it's not installed
+module = [
+  "faiss",
+  "faiss.*",
+]
+ignore_missing_imports = true

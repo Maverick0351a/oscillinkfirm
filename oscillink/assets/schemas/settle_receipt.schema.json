@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://oscillink.ai/schemas/settle_receipt.schema.json",
+  "title": "SettleReceipt",
+  "type": "object",
+  "required": [
+    "deltaH_total",
+    "meta"
+  ],
+  "properties": {
+    "version": { "type": ["string", "number"] },
+    "deltaH_total": { "type": "number" },
+    "term_energies": {
+      "type": "object",
+      "properties": {
+        "anchor": { "type": "number" },
+        "coherence": { "type": "number" },
+        "query": { "type": "number" },
+        "path": { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+    "coh_drop_sum": { "type": "number" },
+    "anchor_pen_sum": { "type": "number" },
+    "query_term_sum": { "type": "number" },
+    "cg_iters": { "type": "integer" },
+    "residual": { "type": "number" },
+    "final_residual": { "type": "number" },
+    "t_ms": { "type": "number" },
+    "null_points": { "type": "array" },
+    "null_points_top": { "type": "array" },
+    "meta": {
+      "type": "object",
+      "required": [
+        "state_sig",
+        "edge_hash",
+        "params",
+        "latency_ms"
+      ],
+      "properties": {
+        "ustar_cached": { "type": "boolean" },
+        "ustar_solves": { "type": "integer" },
+        "ustar_cache_hits": { "type": "integer" },
+        "ustar_converged": { "type": "boolean" },
+        "ustar_res": { "type": "number" },
+        "ustar_iters": { "type": "integer" },
+        "ustar_solve_ms": { "type": "number" },
+        "graph_build_ms": { "type": "number" },
+        "last_settle_ms": { "type": "number" },
+        "avg_degree": { "type": "number" },
+        "edge_density": { "type": "number" },
+        "gates_min": { "type": "number" },
+        "gates_max": { "type": "number" },
+        "gates_mean": { "type": "number" },
+        "gates_uniform": { "type": "boolean" },
+        "state_sig": { "type": "string", "minLength": 8 },
+        "edge_hash": { "type": "string", "minLength": 8 },
+        "receipt_detail": { "type": "string" },
+        "null_points_summary": { "type": "object" },
+        "component_sizes": { "type": "array", "items": { "type": "integer" } },
+        "latency_ms": {
+          "type": "object",
+          "properties": {
+            "build": { "type": "number" },
+            "solve": { "type": "number" },
+            "receipt": { "type": "number" }
+          },
+          "additionalProperties": true
+        },
+        "determinism_env": { "type": ["object", "null"] },
+        "params": {
+          "type": "object",
+          "properties": {
+            "k": { "type": "integer" },
+            "lambdaG": { "type": "number" },
+            "lambdaC": { "type": "number" },
+            "lambdaQ": { "type": "number" },
+            "lambdaP": { "type": "number" },
+            "tol": { "type": "number" }
+          },
+          "additionalProperties": true
+        },
+        "signature": { "type": "object" },
+        "candidate_set_hash": { "type": "string" },
+        "parent_ingest_sig": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

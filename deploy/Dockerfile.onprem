@@ -1,0 +1,48 @@
+# On‑prem ingest Dockerfile (CPU)
+# Includes OCR, PDF extraction, and optional Unstructured + FAISS backends
+FROM python:3.11-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    # Default to deterministic runs unless overridden at runtime
+    OSC_DETERMINISTIC=1
+
+WORKDIR /app
+
+# System packages for OCR/PDF and unstructured
+# - ocrmypdf and tesseract OCR (eng language)
+# - qpdf/ghostscript/pngquant/poppler-utils for PDF handling
+# - file/libmagic for unstructured MIME detection
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl \
+    ocrmypdf tesseract-ocr tesseract-ocr-eng \
+    qpdf ghostscript pngquant poppler-utils \
+    file && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy project
+COPY pyproject.toml README.md ./
+COPY oscillink ./oscillink
+COPY tools ./tools
+COPY models_registry.json /app/models_registry.json
+COPY models /app/models
+COPY cloud ./cloud
+COPY tools ./tools
+
+# Python deps: base package + optional backends
+# Note: FAISS CPU wheels are available for cp311 on manylinux
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir . && \
+    pip install --no-cache-dir \
+        pdfminer.six \
+        unstructured \
+        faiss-cpu \
+        sentence-transformers>=2.2.2 \
+        huggingface-hub>=0.20
+
+# Copy local embedding models and registry (if present) to prefer offline embeddings
+COPY models_registry.json /app/models_registry.json
+COPY models /app/models
+
+# Default command keeps the container available for `docker compose run`
+CMD ["sleep", "infinity"]

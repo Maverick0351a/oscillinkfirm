@@ -1,0 +1,20 @@
+{
+  "dataset": "beir/scifact/test",
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "top_k": 10,
+  "kneighbors": 6,
+  "metrics": {
+    "cosine": {
+      "ndcg@10": 0.23536048330095222,
+      "recall@50": 0.27699999999999997
+    },
+    "oscillink": {
+      "ndcg@10": 0.14158689000577623,
+      "recall@50": 0.27699999999999997
+    }
+  },
+  "counts": {
+    "docs": 5183,
+    "queries": 100
+  }
+}

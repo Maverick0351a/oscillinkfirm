@@ -1,0 +1,6 @@
+FROM node:20-alpine
+WORKDIR /app
+COPY ui /app
+ENV API_URL=http://127.0.0.1:8080
+EXPOSE 3000
+CMD ["node","server.js"]

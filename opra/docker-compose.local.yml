@@ -1,0 +1,46 @@
+version: "3.9"
+services:
+  api:
+    build: { context: ./, dockerfile: ./docker/Dockerfile.api }
+    env_file: [.env]
+    networks: [opra_net]
+    volumes:
+      - ./data/docs:/data/docs:ro
+      - ./data/index:/data/index
+      - ./data/receipts:/data/receipts
+      - ./data/reports:/data/reports
+      - ./config:/app/config:ro
+    command: ["uvicorn","api.app:app","--host","127.0.0.1","--port","8080"]
+    ports: ["127.0.0.1:8080:8080"]
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m
+      - /var/tmp:size=512m
+    security_opt: ["no-new-privileges"]
+
+  ui:
+    build: { context: ./, dockerfile: ./docker/Dockerfile.ui }
+    environment:
+      - API_URL=http://127.0.0.1:8080
+    networks: [opra_net]
+    command: ["node","server.js"]
+    ports: ["127.0.0.1:3000:3000"]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges"]
+
+  llm:
+    build: { context: ./, dockerfile: ./docker/Dockerfile.llm }
+    networks: [opra_net]
+    environment:
+      - HOST=127.0.0.1
+      - PORT=11434
+    command: ["./run_llm.sh"]
+    ports: ["127.0.0.1:11434:11434"]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges"]
+
+networks:
+  opra_net:
+    driver: bridge

@@ -1,0 +1,15 @@
+services:
+  query:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.query.onprem
+    image: oscillink/query-onprem:latest
+    container_name: oscillink-query
+    environment:
+      - OSC_DETERMINISTIC=1
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount your indices read-only into /data
+      - ./data:/data:ro
+    restart: unless-stopped
