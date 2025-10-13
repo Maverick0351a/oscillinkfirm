@@ -607,3 +607,5 @@ Quickstart (install extras first):
 	curl -X POST http://localhost:8080/v1/query -H "Content-Type: application/json" -d '{"index_path":"/path/to/index.jsonl","q":"what is the topic?","backend":"jsonl","k":6}'
 
 For FAISS, pass `"backend":"faiss"` and `"meta_path":"/path/to/index.meta.jsonl"`.
+
+<!-- Pruned legacy duplication below -->
