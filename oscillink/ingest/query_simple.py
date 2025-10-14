@@ -4,7 +4,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 
 @dataclass(frozen=True)
@@ -15,6 +15,7 @@ class IndexRecord:
     end: int
     text: str
     vector: List[float]
+    meta: Dict[str, Any] | None = None
     index_sha256: str | None = None
 
 
@@ -39,6 +40,7 @@ def load_jsonl_index(path: str | Path) -> List[IndexRecord]:
                     start=int(obj["start"]),
                     end=int(obj["end"]),
                     text=obj["text"],
+                    meta=obj.get("meta"),
                     vector=[float(x) for x in obj["vector"]],
                     index_sha256=file_sha,
                 )

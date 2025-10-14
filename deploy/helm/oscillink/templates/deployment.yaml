@@ -19,6 +19,11 @@ spec:
         app: {{ include "oscillink.name" . }}
         release: {{ .Release.Name }}
     spec:
+      serviceAccountName: {{ default (include "oscillink.fullname" .) .Values.serviceAccount.name }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: oscillink
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -60,19 +65,29 @@ spec:
         - name: {{ $k }}
           value: "{{ $v }}"
         {{- end }}
+        {{- if .Values.extraEnv }}
+        {{- range $e := .Values.extraEnv }}
+        - name: {{ $e.name }}
+          value: {{ $e.value | quote }}
+        {{- end }}
+        {{- end }}
         volumeMounts:
         - name: run-tmp
           mountPath: /run
           readOnly: false
-        - name: license
-          mountPath: /run/secrets
+        {{- range $m := .Values.secretMounts }}
+        - name: {{ $m.name }}
+          mountPath: {{ $m.mountPath }}
           readOnly: true
+        {{- end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
       volumes:
       - name: run-tmp
         emptyDir:
           medium: Memory
-      - name: license
+      {{- range $m := .Values.secretMounts }}
+      - name: {{ $m.name }}
         secret:
-          secretName: {{ (index .Values.secretMounts 0).secretName }}
+          secretName: {{ $m.secretName }}
+      {{- end }}

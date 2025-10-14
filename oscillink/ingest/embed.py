@@ -1,13 +1,44 @@
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib import import_module
 from importlib.util import find_spec
+import hashlib
+import os
 from typing import List, Sequence
 
 from .models_registry import ModelSpec, get_model_spec
+
+def _verify_model_hash_dir(model_dir: str, expected_sha256: str) -> bool:
+    """Verify a directory of model files matches expected sha prefix.
+
+    We hash all *.bin/*.safetensors/*.json files in sorted order.
+    """
+    try:
+        import hashlib
+        import os
+        from pathlib import Path
+
+        base = Path(model_dir)
+        h = hashlib.sha256()
+        for root, _dirs, files in os.walk(base):
+            for f in sorted(files):
+                if f.endswith((".bin", ".safetensors", ".json")):
+                    fp = Path(root) / f
+                    try:
+                        with open(fp, "rb") as fh:
+                            while True:
+                                chunk = fh.read(1 << 20)
+                                if not chunk:
+                                    break
+                                h.update(chunk)
+                    except Exception:
+                        continue
+        digest = h.hexdigest().lower()
+        return digest.startswith(str(expected_sha256).lower()[:12])
+    except Exception:
+        return False
 
 
 @dataclass(frozen=True)
@@ -55,6 +86,17 @@ class EmbeddingModel:
 
 def load_embedding_model(name: str) -> EmbeddingModel:
     spec = get_model_spec(name)
+    # Hash enforcement is opt-in to keep local/dev/test flows lightweight and offline-friendly.
+    # Enable strict verification by setting OSCILLINK_EMBED_STRICT_HASH=1/true/on/yes
+    if spec.path and spec.sha256_weights:
+        strict = os.getenv("OSCILLINK_EMBED_STRICT_HASH", "0").lower() in {"1", "true", "on", "yes"}
+        if strict:
+            ok = _verify_model_hash_dir(spec.path, spec.sha256_weights)
+            if not ok:
+                # Raise a clear error to prevent silent drift when strict mode is enabled
+                raise RuntimeError(
+                    f"Embedding weights hash mismatch for {spec.name} at {spec.path} (expected prefix {spec.sha256_weights[:12]})"
+                )
     dim = spec.dim if isinstance(spec.dim, int) and spec.dim > 0 else 64
     return EmbeddingModel(spec=spec, dim=dim)
 

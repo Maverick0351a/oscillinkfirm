@@ -72,6 +72,21 @@ Emitted by the ingest route/CLI when building a deterministic JSONL index:
 - `determinism_env` (object): snapshot of relevant thread/env knobs (OMP_NUM_THREADS, MKL_NUM_THREADS, etc.)
 - `signature` (str): SHA‑256 over canonical JSON of core fields (`version,input_path,chunks,index_path,index_sha256,embed_model,deterministic`)
 
+Optional OCR provenance/quality fields:
+
+- `extract_parser` (string|null): extraction/parser used prior to OCR.
+- `ocr_backend` (string|null): e.g., `ocrmypdf` or `none`.
+- `ocr_langs` (string|null): language codes passed to OCR.
+- `ocr_avg_confidence` (number|null, 0..1): average OCR confidence when the backend reports it.
+- `ocr_low_confidence` (boolean|null): flagged when `ocr_avg_confidence < --ocr-conf-threshold` or heuristically when the OCR backend does not expose confidences (tiny total text or very low avg per‑page length).
+
+Note: `ocr_avg_confidence` is computed as the mean of non‑negative confidences from the Tesseract TSV output across pages. When available, per‑page values are stored in each chunk’s metadata (`meta.ocr_page_confidence`).
+
+CLI controls:
+
+- `--ocr-conf-threshold FLOAT` to set the confidence threshold in [0,1].
+- Heuristic knobs when confidences are unavailable: `--ocr-min-chars INT` (default 32) and `--ocr-min-avg-len FLOAT` (default 16.0).
+
 ## Settle receipt provenance fields
 
 Settle receipts include additional provenance to chain back to the ingest index and candidate identity:
@@ -116,3 +131,13 @@ Use the provenance fields to chain the outputs:
 
 - Ensure `ingest_receipt.index_sha256 == settle_receipt.meta.parent_ingest_sig`.
 - Ensure `settle_receipt.meta.candidate_set_hash` is stable across repeated queries with the same candidate set.
+
+### Query receipt context hints
+
+For convenience in UI and audits, the programmatic query receipts include a compact `meta.context` block with optional hints derived from the selected results:
+
+- `email_thread_ids` (array[str], optional): distinct `email.thread_id` values present in the selected items.
+- `email_message_ids` (array[str], optional): distinct `email.message_id` values.
+- `html_page_titles` (array[str], optional): titles for HTML pages present in the selection.
+
+These fields are present only when such metadata exists in the underlying chunks and are intended as light‑weight pointers for provenance. They do not change determinism guarantees and are omitted when empty.

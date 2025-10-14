@@ -1,0 +1,22 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "oscillink.fullname" . }}
+  labels:
+    app: {{ include "oscillink.name" . }}
+    release: {{ .Release.Name }}
+    {{- range $k, $v := .Values.serviceMonitor.additionalLabels }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "oscillink.name" . }}
+      release: {{ .Release.Name }}
+  endpoints:
+    - path: /metrics
+      port: http
+      interval: {{ .Values.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
+{{- end }}

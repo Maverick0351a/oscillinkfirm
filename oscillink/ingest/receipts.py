@@ -27,6 +27,13 @@ class IngestReceipt:
     embed_license: str | None = None
     embed_weights_sha256: str | None = None
     embed_tokenizer_sha256: str | None = None
+    # Optional extraction/OCR provenance
+    extract_parser: str | None = None
+    ocr_backend: str | None = None
+    ocr_langs: str | None = None
+    # Optional OCR quality indicators
+    ocr_avg_confidence: float | None = None
+    ocr_low_confidence: bool | None = None
 
     def signature(self) -> str:
         # Canonical JSON of the core fields (sorted keys, compact separators)

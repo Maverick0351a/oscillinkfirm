@@ -48,3 +48,35 @@ This runbook summarizes the high-signal, low-noise operational knobs for Oscilli
 - 429: inspect `X-Quota-*`, `X-RateLimit-*`, `X-IPLimit-*`, `X-Monthly-*`
 - JWKS failures: check `OSCILLINK_JWKS_URL`, `OSCILLINK_JWKS_TTL`, offline grace; confirm egress
 - Admin introspection: GET /admin/introspect with `X-Admin-Secret`
+
+## OCR quality governance
+
+Signals and flags
+
+- Ingest receipts may include `ocr_avg_confidence` in [0,1] and a boolean `ocr_low_confidence` flag.
+- Query responses surface these at the top level and per-result (non‑e2e). See README’s “OCR quality signals and UI badge”.
+
+Retrieval behavior
+
+- JSONL: apply small fixed score penalty (0.08) per low‑OCR chunk before re‑ranking to top‑k.
+- FAISS: when the index is flagged low‑OCR, apply a uniform 0.08 penalty to all result scores and re-sort.
+- E2E: if coherence thresholds fail and low‑OCR is flagged, abstain with reason `low-quality OCR`.
+
+Operator thresholds (tunable)
+
+- The fixed penalty is intentionally small and deterministic. If you need to tighten/loosen, adjust in a fork and document the delta in your ops notes.
+- Keep ε (deltaH threshold) and τ (top-score threshold) at defaults initially; raise only when false positives are observed and metrics confirm.
+
+Remediation checklist for low OCR
+
+1) Re-scan documents at ≥300 DPI, grayscale or B/W with proper contrast.
+2) Prefer native PDFs over images of text when possible.
+3) Configure Tesseract language packs for the document’s dominant language(s).
+4) For forms/columns, try `--psm 6` (assumes a uniform block of text) at OCR ingest time.
+5) Remove heavy compression or re-export with lossless settings before ingest.
+6) Validate results on a small sample; re‑ingest affected documents.
+
+Metrics
+
+- `osc_query_abstain_total{reason="low_ocr"|"insufficient",endpoint="query|query-e2e"}`
+- `osc_ocr_low_conf_total{endpoint="query|query-e2e"}`

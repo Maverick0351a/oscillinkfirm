@@ -1,4 +1,4 @@
-# Oscillink — Self‑Optimizing Coherent Memory for Embedding Workflows
+# Oscillink Firm
 
 Build coherence into retrieval and generation. Deterministic receipts for every decision. Latency that scales gracefully with corpus size.
 <p align="center"><img alt="Oscillink" src="assets/oscillink_hero.png" width="640"/></p>
@@ -49,7 +49,7 @@ How we solve it (succinct)
 - Ingest (local): OCR → chunk → embed → build vector index (JSONL/FAISS).
 - Retrieve (local): ANN recall → Oscillink Coherence Engine settles candidates into a coherent working memory.
 - Answer (local): Extractive synthesis by default; optional OpenAI‑compatible LLM running locally.
-- Receipts (local): Each response/report includes ΔH, CG iters/residual, file/index/model SHA‑256, and abstain flags if coherence is low.
+- Receipts (local): Each response/report includes ΔH, CG iters/residual, file/index/model SHA‑256, and abstain flags if coherence is low. We also add lightweight context hints (e.g., email thread/message IDs and HTML page titles) to aid provenance.
 
 Data we index (no egress)
 
@@ -153,7 +153,7 @@ Email specifics
 
 Normalize to UTF‑8, strip quoted reply blocks (keep one level optionally).
 
-Store message‑level embeddings and also attachment embeddings as separate chunks linked back to the parent message.
+Store message‑level embeddings and also attachment embeddings as separate chunks linked back to the parent message. Query receipts may include `email.thread_id` and `email.message_id` under a compact context hint when present.
 
 De‑dup via content hash to avoid storing identical attachments.
 
@@ -167,7 +167,7 @@ HTML/Confluence specifics
 
 Use readability‑style boilerplate removal; keep H1‑H3 hierarchy.
 
-Preserve code blocks and tables as plain text plus a small JSON “shape” in metadata.
+Preserve code blocks and tables as plain text plus a small JSON “shape” in metadata. Query receipts may include the HTML page title under a compact context hint.
 
 Regulated data controls
 
@@ -240,6 +240,9 @@ Cloud feature flags, quotas, and Stripe onboarding are documented under `docs/`:
 
 - Cloud architecture & ops: `docs/cloud/CLOUD_ARCH_GCP.md`, `docs/ops/REDIS_BACKEND.md`
 - Billing: `docs/billing/STRIPE_INTEGRATION.md`, `docs/billing/PRICING.md`
+
+Production readiness: see `docs/ops/PRODUCTION_CHECKLIST.md` for the deployment gate we use before shipping new versions or enabling external access.
+For Kubernetes, see `docs/ops/K8S_DEPLOYMENT.md`.
 ## Security, Privacy, Legal
 
 Policies: [Security](SECURITY.md) · [Privacy](docs/product/PRIVACY.md) · [Terms](docs/product/TERMS.md) · [License](LICENSE) · [Patent notice](PATENTS.md)
@@ -258,333 +261,7 @@ Policies: [Security](SECURITY.md) · [Privacy](docs/product/PRIVACY.md) · [Term
 ## Pricing (licensed container)
 
 ---
-## References
 
-Build coherence into retrieval and generation. Deterministic receipts for every decision. Latency that scales gracefully with corpus size.
-
-<p align="left">
-	<a href="https://github.com/Maverick0351a/Oscillink/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Maverick0351a/Oscillink/actions/workflows/ci.yml/badge.svg?branch=main"/></a>
-	<a href="https://github.com/Maverick0351a/Oscillink/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/Maverick0351a/Oscillink/actions/workflows/codeql.yml/badge.svg?branch=main"/></a>
-	<a href="https://github.com/Maverick0351a/Oscillink/actions/workflows/pip-audit.yml"><img alt="pip-audit" src="https://github.com/Maverick0351a/Oscillink/actions/workflows/pip-audit.yml/badge.svg?branch=main"/></a>
-	<a href="https://app.codecov.io/gh/Maverick0351a/Oscillink/tree/main"><img alt="Coverage" src="https://codecov.io/gh/Maverick0351a/Oscillink/branch/main/graph/badge.svg"/></a>
-	<a href="https://pypi.org/project/oscillink/"><img alt="PyPI" src="https://img.shields.io/pypi/v/oscillink.svg"/></a>
-	<a href="https://pypi.org/project/oscillink/"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/oscillink"/></a>
-	<a href="https://pypi.org/project/oscillink/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/oscillink.svg"/></a>
-	<a href="LICENSE"><img alt="License" src="https://img.shields.io/pypi/l/oscillink.svg"/></a>
-	<a href="PATENTS.md"><img alt="Patent pending" src="https://img.shields.io/badge/Patent-pending-blueviolet.svg"/></a>
-	<a href="docs/foundations/MATH_OVERVIEW.md"><img alt="Math" src="https://img.shields.io/badge/Math-Math%20Overview-4B8BBE"/></a>
-	<br/>
-	<sub>CI: Python 3.10–3.12 × NumPy 1.x/2.x</sub>
-
-</p>
-
-<p align="center">
-  <a href="https://pypi.org/project/oscillink/"><img alt="pip install oscillink" src="https://img.shields.io/badge/pip%20install-oscillink-3776AB?logo=pypi&logoColor=white"/></a>
-</p>
-
-<p align="center"><b>A physics‑inspired, model‑free coherence layer that transforms candidate embeddings into an explainable working‑memory state via convex energy minimization. Deterministic receipts for audit. Conjugate‑gradient solve with SPD guarantees.</b><br/>
-<code>pip install oscillink</code></p>
-
-Setup: synthetic “facts + traps” dataset — see the notebook for N, k, trials, seed. Reproducible via `notebooks/04_hallucination_reduction.ipynb`. Traps flagged; gate=0.01, off‑topic damp=0.5.
-
-- Latency scales smoothly: with fixed D, k, and CG tol, settle tends to remain stable with denser graphs. Reference E2E < 40 ms at N≈1200 on a laptop CPU.
-- Hallucination control: in our controlled study[1], Oscillink reduced trap selections while maintaining competitive F1. See the notebook for setup and reproduction.
-- Receipts: SHA‑256 state signature; optional HMAC‑SHA256. [schema](docs/reference/RECEIPTS.md)
-- Universal: works with any embeddings, no retraining. [adapters](#adapters--model-compatibility) · [quickstart](examples/quickstart.py)
-- Self‑optimizing: learns parameters over time. [adaptive suite](scripts/bench_adaptive_suite.py)
-- Production: scales to millions. See scripts under `scripts/` for reproducible benchmarks.
-
-<p>
-	<a href="#quickstart">Get Started</a> · <a href="docs/reference/API.md">API Docs</a> · <a href="#proven-results">See Results</a> · <a href="notebooks/">Live Demos</a>
-</p>
-
-<p align="center">
-	<a href="https://github.com/Maverick0351a/Oscillink/actions/workflows/ci.yml">CI</a> ·
-	<a href="https://pypi.org/project/oscillink/">PyPI</a> ·
-	<a href="docs/reference/API.md">API</a> ·
-	<a href="docs/foundations/MATH_OVERVIEW.md">Math</a> ·
-	<a href="docs/reference/RECEIPTS.md">Receipts</a> ·
-	<a href="benchmarks/">Benchmarks</a> ·
-	<a href="notebooks/">Notebooks</a>
-</p>
-
----
-
-## Contents
-
-- Overview
-- Quickstart
-- Adapters & Compatibility
-- Reproducibility
-- Performance
-- Method (Technical)
-- Deployment Options
-- Security, Privacy, Legal
-- Troubleshooting
-- Contributing & License
-- Changelog
-
----
-pip install oscillink
-# Oscillink — Self‑Optimizing Coherent Memory for Embedding Workflows
-
-Build coherence into retrieval and generation. Deterministic receipts for every decision. Latency that scales gracefully with corpus size.
-
-<p align="left">
-  <a href="https://github.com/Maverick0351a/Oscillink/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Maverick0351a/Oscillink/actions/workflows/ci.yml/badge.svg?branch=main"/></a>
-  <a href="https://github.com/Maverick0351a/Oscillink/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/Maverick0351a/Oscillink/actions/workflows/codeql.yml/badge.svg?branch=main"/></a>
-  <a href="https://github.com/Maverick0351a/Oscillink/actions/workflows/pip-audit.yml"><img alt="pip-audit" src="https://github.com/Maverick0351a/Oscillink/actions/workflows/pip-audit.yml/badge.svg?branch=main"/></a>
-  <a href="https://app.codecov.io/gh/Maverick0351a/Oscillink/tree/main"><img alt="Coverage" src="https://codecov.io/gh/Maverick0351a/Oscillink/branch/main/graph/badge.svg"/></a>
-  <a href="https://pypi.org/project/oscillink/"><img alt="PyPI" src="https://img.shields.io/pypi/v/oscillink.svg"/></a>
-  <a href="https://pypi.org/project/oscillink/"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/oscillink"/></a>
-  <a href="https://pypi.org/project/oscillink/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/oscillink.svg"/></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/pypi/l/oscillink.svg"/></a>
-  <a href="PATENTS.md"><img alt="Patent pending" src="https://img.shields.io/badge/Patent-pending-blueviolet.svg"/></a>
-  <a href="docs/foundations/MATH_OVERVIEW.md"><img alt="Math" src="https://img.shields.io/badge/Math-Math%20Overview-4B8BBE"/></a>
-  <br/>
-  <sub>CI: Python 3.10–3.12 · NumPy 1.x/2.x</sub>
-</p>
-
-<p align="center"><img alt="Oscillink" src="assets/oscillink_hero.png" width="640"/></p>
-
-Abstract. Oscillink is a physics‑inspired, model‑free coherence layer that transforms a set of candidate embeddings into an explainable working‑memory state by minimizing a strictly convex energy on a mutual‑kNN lattice. The system solves a symmetric positive‑definite (SPD) linear system via preconditioned conjugate gradients (CG), returning (i) refined embeddings U*, (ii) a deterministic, signed “receipt” with energy improvement ΔH, and (iii) per‑edge/null‑point diagnostics. No training is required; your embeddings are the model.
-
-Install: `pip install oscillink` · Docs: [API](docs/API.md) · Math: [Overview](docs/foundations/MATH_OVERVIEW.md) · Receipts: [Schema](docs/RECEIPTS.md)
-
----
-
-## Contents
-
-- Overview
-- Quickstart
-- Adapters & Compatibility
-- Reproducibility
-- Performance
-- Method (Technical)
-- Deployment Options
-- Security, Privacy, Legal
-- Troubleshooting
-- Contributing & License
-- Changelog
-
----
-
-## Overview
-
-Oscillink builds a transient mutual‑kNN graph over N×D anchors `Y` and settles to a unique global optimum of a convex energy. The result is a coherent bundle of items for a query `psi`, along with an auditable “receipt” that explains the decision.
-
-Outputs per run:
-
-- Refined state U* (coherent embeddings)
-- Receipt with ΔH (energy drop), term breakdown, CG iterations/residuals, and a SHA‑256 state signature (optional HMAC)
-- Diagnostics: null points (incoherent edges), chain/prior scores (optional)
-
-The system is deterministic, explainable, and training‑free.
-
----
-
-## Quickstart
-
-Minimal, 60 seconds:
-
-```bash
-pip install oscillink
-python - <<'PY'
-import numpy as np
-from oscillink import Oscillink
-
-# Anchors (N x D, float32) and a D-dim query
-Y = np.random.randn(80,128).astype('float32')
-psi = (Y[:10].mean(0) / (np.linalg.norm(Y[:10].mean(0))+1e-9)).astype('float32')
-
-lat = Oscillink(Y, kneighbors=6, lamG=1.0, lamC=0.5, lamQ=4.0)
-lat.set_query(psi)
-lat.settle()
-
-print("top-5:", [(b.get("id", i), round(b["score"],3)) for i,b in enumerate(lat.bundle(k=5))])
-print("ΔH:", lat.receipt()["deltaH_total"])
-PY
-```
-
-System requirements: Python 3.10–3.12, NumPy ≥ 1.22 (1.x/2.x supported). CPU only.
-
-SDK at a glance:
-
-```python
-from oscillink import Oscillink
-
-# Y: (N, D) embeddings; psi: (D,) query (float32 recommended)
-lattice = Oscillink(Y, kneighbors=6)
-lattice.set_query(psi)
-lattice.settle()
-bundle  = lattice.bundle(k=5)   # coherent top-k
-receipt = lattice.receipt()     # deterministic audit (energy breakdown)
-```
-
-Scoring modes. Bundle ranking supports two equivalent formulations:
-- Legacy (default): `score = alpha*z(coherence_drop) + (1-alpha)*cos(U*_i, psi)`
-- Paper mode: `score = alpha*cos(U*_i, psi) + (1-alpha)*z(coherence_drop)`
-
-Toggle via environment `OSCILLINK_BUNDLE_MODE=paper|legacy` without code changes.
-
-Gating. You can gate participation with diffusion‑based gates in [0,1]:
-
-```python
-from oscillink import compute_diffusion_gates
-gates = compute_diffusion_gates(Y, psi, gamma=0.1, beta=1.0)
-lattice.set_gates(gates)
-```
-
----
-
-## Adapters & Compatibility
-
-- Embeddings: Bring your own (OpenAI, Cohere, Sentence‑Transformers, local). Shapes: `Y: (N, D)`, `psi: (D,)`, preferably near unit‑norm float32.
-- Dependencies: NumPy + small helpers; no framework lock‑in.
-- Adapters: see `oscillink.adapters.*` for simple text embedding utilities.
-- Tuning: Practical knobs are `kneighbors`, `lamC`, `lamQ`. CLI `--tune` and the adaptive suite offer data‑driven defaults.
-- Preprocessing: optional `smart_correct` can reduce incidental traps in noisy inputs.
-- Platforms: Windows, macOS, Linux.
-
----
-
-## Reproducibility
-
-Claim → how to reproduce (scripts write JSON or plots):
-
-| Claim | How to reproduce |
-|---|---|
-| Coherence vs cosine baseline on provided sample | `python scripts/competitor_benchmark.py --input examples/real_benchmark_sample.jsonl --format jsonl --text-col text --id-col id --label-col label --trap-col trap --query-index 0 --k 5 --json --out benchmarks/competitor_sample.json` then `python scripts/plot_benchmarks.py --competitor benchmarks/competitor_sample.json --out-dir assets/benchmarks` |
-| Scaling timing vs N | `python scripts/scale_benchmark.py --N 400 800 1200 --D 64 --k 6 --trials 2 > benchmarks/scale.jsonl` then `python scripts/plot_benchmarks.py --scale benchmarks/scale.jsonl --out-dir assets/benchmarks` |
-| Receipt proof (energy, signature) | `pip install -e .[dev]` then `python scripts/proof_hallucination.py --seed 123 --n 1200 --d 128` |
-
-Notes: The “facts + traps” setup used in the notebook is a controlled study to demonstrate controllability and auditability. Evaluate on your corpus before drawing production conclusions.
-
----
-
-## Performance
-
-Reference (laptop, Python 3.11, NumPy BLAS, N≈1200, light receipts):
-
-- Graph build: ~18 ms
-- Settle: ~10 ms
-- Receipt: ~3 ms
-
-Total: under ~40 ms.
-
-As N grows (fixed D, k, tol), CG typically converges in 3–4 iterations with Jacobi preconditioning; end‑to‑end times scale smoothly.
-
-Complexity: one matvec is O(Nk); overall solve ≈ O(D · cg_iters · N · k).
-
----
-
-## Method (Technical)
-
-Oscillink minimizes a convex energy on a mutual‑kNN lattice:
-
-$$
-H(U)=\lambda_G\|U-Y\|_F^2+\lambda_C\,\mathrm{tr}(U^\top L_{\mathrm{sym}}U)+\lambda_Q\,\mathrm{tr}\big((U-\mathbf{1}\psi^\top)^\top\,B\,(U-\mathbf{1}\psi^\top)\big)
-$$
-
-with optional path prior term $\lambda_P L_{\text{path}}$. Normal equations yield an SPD system $MU^*=F$ with
-
-$$
-M=\lambda_G I+\lambda_C L_{\mathrm{sym}}+\lambda_Q B+\lambda_P L_{\text{path}},\quad F=\lambda_G Y+\lambda_Q B\,\mathbf{1}\psi^\top.
-$$
-
-Properties. If $\lambda_G>0$ and $L_{\mathrm{sym}}, B, L_{\text{path}}$ are symmetric PSD, then $M$ is SPD ⇒ unique minimizer $U^*$. We solve with Jacobi‑preconditioned CG. Each run emits a receipt with $\Delta H$, per‑term energy, CG stats, and a SHA‑256 state signature (optional HMAC).
-
-More detail: [Foundations / Math Overview](docs/foundations/MATH_OVERVIEW.md)
-
----
-
-## Deployment Options
-
-### A. SDK (local)
-
-Keep everything in‑process. See Install and examples under `examples/`.
-
-### B. Licensed container (customer‑managed)
-
-Run the API entirely inside your VPC/cluster. No embeddings or content leave your network; only license/usage heartbeats if enabled.
-
-<details>
-<summary>Container quickstart and operations (click to expand)</summary>
-
-#### Quickstart (Docker)
-
-1) Place a license at `deploy/license/oscillink.lic` (Ed25519‑signed JWT).
-
-```bash
-docker compose -f deploy/docker-compose.yml up -d
-```
-
-API: http://localhost:8000 · health: `/health` · license status: `/license/status`
-
-#### Required env
-
-- `OSCILLINK_LICENSE_PATH` (default `/run/secrets/oscillink.lic`)
-- `OSCILLINK_JWKS_URL` (e.g., https://license.oscillink.com/.well-known/jwks.json)
-
-#### Optional
-
-- `OSCILLINK_TELEMETRY=minimal` (aggregated counters only)
-- `OSCILLINK_USAGE_LOG=/data/usage.jsonl`
-- `OSCILLINK_USAGE_FLUSH_URL` (batch upload)
-- JWT verification knobs: `OSCILLINK_JWT_ISS`, `OSCILLINK_JWT_AUD`, `OSCILLINK_JWT_LEEWAY`, `OSCILLINK_JWKS_TTL`, `OSCILLINK_JWKS_OFFLINE_GRACE`
-
-#### Redis (optional)
-
-- `OSCILLINK_STATE_BACKEND=redis` — enable Redis-backed app state (e.g., rate limits, quotas, caches)
-- `OSCILLINK_REDIS_URL=redis://localhost:6379/0` — Redis connection string (alternatively, set `REDIS_URL`)
-
-See `docs/ops/REDIS_BACKEND.md` for details and production guidance.
-
-#### Kubernetes (Helm)
-
-- Chart skeleton at `deploy/helm/oscillink`.
-- Mount secret to `/run/secrets/oscillink.lic`, set `OSCILLINK_LICENSE_PATH` and `OSCILLINK_JWKS_URL`.
-- Optional hardening: NetworkPolicy, PDB, HPA, Ingress.
-
-#### Operator introspection
-
-```bash
-# set OSCILLINK_ADMIN_SECRET before running the container
-curl -H "X-Admin-Secret: $OSCILLINK_ADMIN_SECRET" http://localhost:8000/admin/introspect
-```
-
-Metrics protection: set `OSCILLINK_METRICS_PROTECTED=1` (requires X‑Admin‑Secret on `/metrics`).
-
-</details>
-
-### C. Cloud API (beta)
-
-Opt‑in hosted API for convenience. Obtain an API key and call:
-
-```python
-import os, httpx
-API_BASE = os.environ.get("OSCILLINK_API_BASE", "https://api2.odinprotocol.dev")
-API_KEY  = os.environ["OSCILLINK_API_KEY"]
-r = httpx.post(
-	f"{API_BASE}/v1/settle",
-	json={"Y": [[0.1,0.2]], "psi": [0.1,0.2], "options": {"bundle_k": 1, "include_receipt": True}},
-	headers={"X-API-Key": API_KEY},
-)
-print(r.json())
-```
-
-Cloud feature flags, quotas, and Stripe onboarding are documented under `docs/`:
-
-- Cloud architecture & ops: `docs/cloud/CLOUD_ARCH_GCP.md`, `docs/ops/REDIS_BACKEND.md`
-- Billing: `docs/billing/STRIPE_INTEGRATION.md`, `docs/billing/PRICING.md`
-
----
-
-## Security, Privacy, Legal
-
-- Local SDK: does not transmit embeddings/content anywhere.
-
----
 
 ## Minimal on‑prem HTTP query service
 
@@ -598,14 +275,202 @@ For air‑gapped or on‑prem setups that only need retrieval over a prebuilt in
 Quickstart (install extras first):
 
 1) Install cloud extras
-	pip install -e .[cloud]
+
+```bash
+pip install -e .[cloud]
+```
 
 2) Start the server
-	uvicorn examples.query_server:app --host 0.0.0.0 --port 8080
+
+```bash
+uvicorn examples.query_server:app --host 0.0.0.0 --port 8080
+```
 
 3) Query it
-	curl -X POST http://localhost:8080/v1/query -H "Content-Type: application/json" -d '{"index_path":"/path/to/index.jsonl","q":"what is the topic?","backend":"jsonl","k":6}'
+
+```bash
+curl -X POST http://localhost:8080/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"index_path":"/path/to/index.jsonl","q":"what is the topic?","backend":"jsonl","k":6}'
+```
 
 For FAISS, pass `"backend":"faiss"` and `"meta_path":"/path/to/index.meta.jsonl"`.
+
+Filtering by metadata (non‑e2e JSONL only):
+
+Include an optional `filters` object for equality matches on chunk metadata (e.g., `matter_id`, `client_id`, `department`). Example:
+
+```
+{
+	"index_path": "/path/to/index.jsonl",
+	"q": "billing policy",
+	"backend": "jsonl",
+	"k": 6,
+	"filters": {"matter_id": "M-123", "department": "litigation"}
+}
+```
+
+Docker (local build):
+
+Use the included Dockerfile and compose profile to run the query service as non‑root with a read‑only filesystem.
+
+1) Build and run
+
+```
+docker compose -f deploy/docker-compose.yml up --build oscillink_local
+```
+
+2) Health check
+
+```
+curl -fsS http://127.0.0.1:8080/health
+```
+
+Licensed mode (no egress):
+
+The query server container now supports the same license gate as the ingest container. Mount your license token and an internal JWKS file, and the entrypoint will validate before serving:
+
+1) Prepare secrets
+
+```
+# Place files under deploy/license/
+#   - oscillink.lic    (your Ed25519-signed license JWT)
+#   - jwks.json        (your mirrored JWKS)
+```
+
+2) Run with compose (uses file:// JWKS and fails readiness if unlicensed)
+
+```
+docker compose -f deploy/docker-compose.yml up --build oscillink_local
+```
+
+3) Check license status
+
+```
+curl -fsS http://127.0.0.1:8080/license/status
+```
+
+Set OSCILLINK_LICENSE_REQUIRED=1 to make /license/status return 503 when entitlements are missing. For fully air‑gapped environments, keep OSCILLINK_JWKS_URL pointing to a file:// path you mount in the container.
+
+Metrics and observability:
+
+- Enable header protection for /metrics by setting `OSCILLINK_METRICS_PROTECTED=1` and defining `OSCILLINK_ADMIN_SECRET`. Send the secret via the `X-Admin-Secret` header.
+- On Kubernetes, enable the Helm `serviceMonitor.enabled=true` to let Prometheus Operator scrape `/metrics`.
+
+### OCR quality signals and UI badge
+
+When an index was built from low-quality scans, the server surfaces two fields on query responses (both e2e and non‑e2e):
+
+- `ocr_low_confidence`: boolean, present at the top level and also attached to each result item in non‑e2e responses when applicable
+- `ocr_avg_confidence`: number in [0,1] when available (best-effort; may be null for backends that don’t emit confidences)
+
+Deterministic filters: When you pass a `filters` object (equality on chunk metadata), the pipeline deterministically prefilters the candidate set before settling. This only changes the `meta.candidate_set_hash` and the selection itself—core receipt fields (model dims/hashes, `epsilon`, `tau`, convergence stats format, and schema keys) remain stable. Early-abstain occurs if all candidates are filtered out, with reason `"no candidates after filter"`.
+
+Behavioral guardrails (env → firm.yaml → built-ins):
+
+- JSONL path applies a configurable score penalty (default 0.08) to chunks with `ocr_low_confidence=true` before top‑k re‑ranking
+- FAISS path applies the same configurable uniform penalty to all result scores when the index is flagged low‑OCR, then re‑sorts for determinism
+- E2E path abstains with reason `"low-quality OCR"` when coherence thresholds fail and the index is flagged low‑OCR
+
+Prometheus metrics (optional):
+
+- `osc_query_abstain_total{reason="low_ocr"|"insufficient",endpoint="query|query-e2e"}`
+- `osc_ocr_low_conf_total{endpoint="query|query-e2e"}`
+- `osc_ocr_avg_conf_gauge{endpoint="query|query-e2e"}`
+
+Simple UI badge example (client-side):
+
+```python
+def enrich_citations(items):
+	out = []
+	for it in items:
+		badge = "\u26A0 OCR" if it.get("ocr_low_confidence") else None
+		out.append({
+			**it,
+			"badges": ([badge] if badge else []),
+		})
+	return out
+
+# Usage (non-e2e):
+# resp = requests.post("/v1/query", json=payload).json()
+# citations = enrich_citations(resp.get("results", []))
+
+# Usage (e2e):
+# resp = requests.post("/v1/query-e2e", json=payload).json()
+# show a single top-level badge if resp.get("ocr_low_confidence") is True
+```
+
+Example response (compact):
+
+```json
+{
+	"answer": "Clause 9 limits indemnity to direct damages...",
+	"abstain": false,
+	"receipt": { "deltaH_total": 0.014, "epsilon": 0.001, "tau": 0.30 },
+	"ocr_low_confidence": true,
+	"ocr_avg_confidence": 0.58,
+	"citations": [
+		{ "title": "MSA_2019.pdf", "page": 7, "ocr_low_confidence": true, "ocr_avg_confidence": 0.58 },
+		{ "title": "SOW_Addendum.pdf", "page": 2, "ocr_low_confidence": false }
+	]
+}
+```
+
+When all top‑K candidates are flagged and ΔH < ε, the system abstains with reason "low-quality OCR" and suggests rescanning in the report appendix.
+
+Configuration
+
+- Drop a sample `firm.yaml` in the repo root (or set `OSCILLINK_CONFIG` to a path). Load precedence: environment variables → `firm.yaml` → built‑ins.
+- See `docs/ops/ALERTS.md` for Prometheus alerts that watch low‑quality OCR signals.
+
+## Environment and config quick reference
+
+You can tune behavior with environment variables or a minimal `firm.yaml` (env overrides YAML). Core knobs:
+
+- OSCILLINK_CONFIG: Path to config YAML (default: `./firm.yaml`).
+- OSCILLINK_OCR_SCORE_PENALTY: Penalty applied to scores for low‑OCR items (default: `0.08`).
+- OSCILLINK_OCR_ABSTAIN_ON_ALL_LOW: When all top‑K are low‑OCR and coherence fails, abstain (default: `true`).
+- OSCILLINK_METRICS_PROTECTED: Require admin secret on `/metrics` when set to 1/true/on.
+- OSCILLINK_ADMIN_SECRET: Secret value expected in the `X-Admin-Secret` header.
+- OSCILLINK_LICENSE_REQUIRED: Make `/license/status` return 503 when entitlements are missing (1/true/on).
+- OSCILLINK_JWKS_URL: JWKS URL or `file://` path for the license public keys (air‑gapped: use `file:///.../jwks.json`).
+- OSCILLINK_ENTITLEMENTS_PATH: Path where the container writes validated entitlements JSON (default: `/run/oscillink_entitlements.json`).
+- OSCILLINK_LICENSE_PATH: Path to the signed license token (default used by Docker/Helm examples: `/run/secrets/oscillink.lic`).
+- OSC_DETERMINISTIC: Set to 1 to apply stricter deterministic settings at import time.
+
+YAML layout (selected keys under `quality.ocr`):
+
+```yaml
+quality:
+	ocr:
+		score_penalty: 0.08
+		abstain_on_all_low: true
+```
+
+### Windows PowerShell examples
+
+Set environment variables for the current session and run the local server:
+
+```powershell
+$env:OSCILLINK_CONFIG = "C:\\data\\firm.yaml"
+$env:OSCILLINK_OCR_SCORE_PENALTY = "0.12"
+$env:OSCILLINK_OCR_ABSTAIN_ON_ALL_LOW = "true"
+python -m pip install -e .[cloud]
+uvicorn examples.query_server:app --host 127.0.0.1 --port 8080
+```
+
+Protected metrics endpoint from PowerShell (assuming a secret):
+
+```powershell
+$env:OSCILLINK_METRICS_PROTECTED = "1"
+$env:OSCILLINK_ADMIN_SECRET = "supersecret"
+Invoke-RestMethod -Uri "http://127.0.0.1:8080/metrics" -Headers @{"X-Admin-Secret" = $env:OSCILLINK_ADMIN_SECRET}
+```
+
+License status check from PowerShell:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8080/license/status" | ConvertTo-Json -Depth 5
+```
 
 <!-- Pruned legacy duplication below -->

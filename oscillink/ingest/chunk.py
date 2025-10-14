@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from importlib.util import find_spec
-from typing import List, Sequence
+from typing import Any, Dict, List, Sequence
 
 from .extract import ExtractedPage
 
@@ -14,6 +15,7 @@ class Chunk:
     start: int
     end: int
     text: str
+    meta: Dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -67,20 +69,58 @@ def _paragraph_spans(text: str) -> List[tuple[int, int]]:
     return spans
 
 
+def _md_headings(text: str) -> List[tuple[int, int, str]]:
+    """Return list of markdown-style headings as (pos, level, title).
+
+    We intentionally avoid backtracking-heavy regex features for determinism and speed.
+    """
+    try:
+        return [(m.start(), len(m.group(1)), m.group(2).strip()) for m in re.finditer(r"(?m)^(#{1,6})\s+(.+?)\s*$", text)]
+    except Exception:
+        return []
+
+
+def _nearest_heading(headings: Sequence[tuple[int, int, str]], pos: int) -> tuple[int | None, str | None]:
+    lvl: int | None = None
+    title: str | None = None
+    for hpos, hlvl, htitle in headings:
+        if hpos <= pos:
+            lvl, title = hlvl, htitle
+        else:
+            break
+    return lvl, title
+
+
+def _compose_meta(base: Dict[str, Any] | None, section_level: int | None, section_title: str | None) -> Dict[str, Any] | None:
+    if base is None and section_level is None and section_title is None:
+        return None
+    meta_out: Dict[str, Any] = dict(base) if isinstance(base, dict) else {}
+    if section_title is not None:
+        meta_out["section_title"] = section_title
+    if section_level is not None:
+        meta_out["section_level"] = int(section_level)
+    return meta_out
+
+
 def chunk_paragraphs(pages: Sequence[ExtractedPage], *, ruleset: str = "paragraph") -> ChunkResult:
     chunks: List[Chunk] = []
     for page in pages:
+        headings = _md_headings(page.text)
         for start, end in _paragraph_spans(page.text):
-            if end > start:
-                chunks.append(
-                    Chunk(
-                        source_path=page.source_path,
-                        page_number=page.page_number,
-                        start=start,
-                        end=end,
-                        text=page.text[start:end],
-                    )
+            if end <= start:
+                continue
+            lvl, title = _nearest_heading(headings, start)
+            meta_out = _compose_meta(page.meta, lvl, title)
+            chunks.append(
+                Chunk(
+                    source_path=page.source_path,
+                    page_number=page.page_number,
+                    start=start,
+                    end=end,
+                    text=page.text[start:end],
+                    meta=meta_out,
                 )
+            )
     # Deterministic ordering
     chunks.sort(key=lambda c: (c.source_path, c.page_number, c.start, c.end))
     return ChunkResult(chunks=chunks, ruleset=ruleset)
@@ -125,6 +165,7 @@ def chunk_unstructured(pages: Sequence[ExtractedPage], *, ruleset: str = "unstru
                         start=start,
                         end=end,
                         text=page.text[start:end],
+                        meta=page.meta,
                     )
                 )
         chunks.sort(key=lambda c: (c.source_path, c.page_number, c.start, c.end))

@@ -1,6 +1,18 @@
 # [0.1.9] - 2025-10-10
 # [0.1.9] - 2025-10-10
 ## [Unreleased]
+### Added
+- OCR TSV confidence parsing (Tesseract TSV) with document-level mean; per-page confidences stored in chunk metadata when available. Surfaced in receipts and Prometheus metrics.
+- E2E filters: deterministic prefiltering with standardized early-abstain reason ("no candidates after filter").
+- Configurable OCR quality penalties and abstain behavior (JSONL/FAISS) via `firm.yaml` and environment overrides.
+- Model hash verification enforcement and tests to prevent silent embedding drift.
+- Determinism test ensuring `candidate_set_hash` changes with filters while core receipt fields remain stable.
+
+### Changed
+- README and receipts docs updated with OCR confidence source and filters determinism guarantees.
+
+### CI
+- Added a fast targeted CI job to run the new tests across Python 3.10–3.12.
 ## [0.1.13] - 2025-10-11
 ### Changed
 - README polish: moved logo directly under badges for better GitHub rendering.

@@ -33,12 +33,23 @@ jobs:
       - name: Build container (licensed)
         run: |
           docker build -t oscillink:licensed -f cloud/Dockerfile.licensed .
+      - name: Build container (query)
+        run: |
+          docker build -t oscillink:query -f Dockerfile .
       - name: Trivy scan (non-blocking)
         uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: 'oscillink:licensed'
           format: 'table'
           exit-code: '0' # do not fail PRs initially; tighten later
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+      - name: Trivy scan (query image, non-blocking)
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: 'oscillink:query'
+          format: 'table'
+          exit-code: '0'
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 

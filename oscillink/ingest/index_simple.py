@@ -30,6 +30,7 @@ def build_jsonl_index(chunks: Sequence[Chunk], vectors: Sequence[Sequence[float]
                 "start": ch.start,
                 "end": ch.end,
                 "text": ch.text,
+                "meta": ch.meta,
                 "vector": vec,
             }
             f.write(json.dumps(rec, separators=(",", ":")) + "\n")

@@ -1,10 +1,66 @@
 name: CI
+
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+
 jobs:
+  fast-targeted:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10','3.11','3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+      - name: Ruff Lint (targeted only)
+        run: ruff check tests/test_ocr_tsv_conf.py tests/test_model_hash_verification.py tests/test_e2e_filters_abstain.py tests/test_candidate_set_hash_determinism.py
+      - name: Run targeted tests
+        run: pytest -q -k "ocr_tsv_conf or model_hash_verification or e2e_filters_abstain or candidate_set_hash_determinism"
+
+  build-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
+
+      - name: Lint (ruff)
+        run: |
+          ruff --version
+          ruff check .
+
+      - name: Type check (mypy)
+        run: |
+          mypy oscillink
+
+      - name: Run tests (pytest)
+        run: |
+          pytest -q
   test:
     runs-on: ubuntu-latest
     strategy:

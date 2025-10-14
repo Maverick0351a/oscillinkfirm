@@ -93,6 +93,18 @@ docker compose -f docker-compose.local.yml up -d
 - GET  /v1/watcher/status: background auto-indexer status
 - POST /v1/watcher/scan: run one scan iteration on demand
 
+### k limits: chat vs. query
+
+- /v1/chat applies an effective cap of k ≤ 20 to keep answers focused; if you pass a higher k, the API returns 422 with a friendly hint to use /v1/query for larger contexts.
+- /v1/query supports k up to 100. For larger top‑K explorations or batch/report flows, prefer /v1/query.
+
+Recent benchmark artifacts (saved under `_bench/`):
+
+- Concurrent query (Linux container, 4 workers), k=60, concurrency=8, runs=200: `_bench/query_k60_c8_w4.json` and `_bench/query_k60_c8_w4.csv` (p95 ≈ 36 ms)
+- Single‑thread baseline, k=60, concurrency=1, runs=200: `_bench/query_k60_c1.json` and `_bench/query_k60_c1.csv`
+
+These JSON files include p50/p95/p99 and configuration; CSV files contain raw per‑request latencies.
+
 ## Auto-ingest watcher
 
 A lightweight background watcher polls `opra/data/docs` and auto-builds indices under `opra/data/index`.
@@ -121,3 +133,30 @@ A manifest `index_manifest.json` is persisted under receipts to track processed 
   - [x] Scaffold created with minimal /health and /v1/query (wired to oscillink query service).
   - [ ] Watcher, ingest/index routers, chat/report endpoints.
   - [ ] UI chat with receipts modal; report builder.
+
+## Service SLOs and metrics
+
+Target SLOs (single node, CPU):
+
+- /v1/chat (extractive): p95 ≤ 150 ms
+- /v1/query (k ≤ 60): p95 ≤ 180 ms
+
+Reading latency histograms (when metrics enabled):
+
+- Enable Prometheus metrics in the process (see the root README “Metrics and observability”). When enabled, we expose:
+  - osc_query_abstain_total{reason,endpoint}
+  - osc_ocr_low_conf_total{endpoint}
+  - osc_ocr_avg_conf_gauge{endpoint}
+- For end‑to‑end latency histograms, use your HTTP layer/ingress or a sidecar (e.g., Envoy/NGINX) to emit request duration buckets; this repo’s benchmark scripts write CSVs for direct analysis.
+
+Notes:
+
+- If you observe p95 above the SLOs, record the index/model digests from the response receipt:
+  - receipt.query_model_sha256 and receipt.index_model_sha256
+  - ingest_receipt.index_sha256
+  and include benchmark JSON/CSV for triage.
+
+Dev note (no license for local testing):
+- The licensed container entrypoint enforces license validation. For local benchmarks, you can override the entrypoint to run uvicorn directly and skip the gate:
+  - `docker run ... --entrypoint uvicorn ... examples.query_server:app --host 0.0.0.0 --port 8080 --workers 4`
+  - Mount `_tmp_demo` → `/data` and `models_registry.json` → `/app/models_registry.json` to match embedding dims.

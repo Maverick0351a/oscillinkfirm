@@ -14,10 +14,22 @@
   "properties": {
     "version": { "type": "integer", "minimum": 1 },
     "input_path": { "type": "string" },
+    "file_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
     "chunks": { "type": "integer", "minimum": 0 },
     "index_path": { "type": "string" },
     "index_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "embed_model": { "type": "string" },
+    "embed_dim": { "type": ["integer", "null"] },
+    "embed_license": { "type": ["string", "null"] },
+    "embed_weights_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "embed_tokenizer_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "deterministic": { "type": "boolean" },
+    "determinism_env": { "type": "object", "additionalProperties": {"type":"string"} },
+    "extract_parser": { "type": ["string", "null"] },
+    "ocr_backend": { "type": ["string", "null"] },
+    "ocr_langs": { "type": ["string", "null"] },
+    "ocr_avg_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "ocr_low_confidence": { "type": ["boolean", "null"] },
     "meta": { "type": "object", "additionalProperties": true }
   },
   "additionalProperties": false

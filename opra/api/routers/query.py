@@ -20,6 +20,7 @@ class QueryRequest(BaseModel):
     epsilon: float = Field(1e-3, ge=0.0)
     tau: float = Field(0.30, ge=0.0, le=1.0)
     e2e: bool = False
+    filters: Optional[Dict[str, Any]] = None
 
 class QueryResponse(BaseModel):
     results: Optional[list[dict]] = None
@@ -42,4 +43,5 @@ def post_query(req: QueryRequest) -> Dict[str, Any]:
         e2e=req.e2e,
         epsilon=req.epsilon,
         tau=req.tau,
+        filters=req.filters,
     )

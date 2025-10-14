@@ -10,11 +10,13 @@ This folder contains example manifests and values to help you enable optional pr
 - `values-eks.yaml` — EKS-friendly defaults (ALB ingress class + annotations, TLS secret wiring, HPA/PDB, NetworkPolicy).
 - `values-aks.yaml` — AKS-friendly defaults (nginx ingress class, TLS secret wiring, HPA/PDB, NetworkPolicy).
 - `values-private.yaml` — Private cluster defaults (no public ingress, strict egress, optional proxy envs).
+- `values-airgapped.yaml` — Fully air‑gapped defaults (JWKS via file://, no DNS/egress, no public ingress).
 - `values-proxy.yaml` — Proxy-only tweak to layer on outbound proxy env vars.
 - `cert-manager/cluster-issuer.yaml` and `cert-manager/certificate.yaml` — Sample manifests for automatic TLS.
 - `cert-manager/cluster-issuer-eks.yaml` and `cert-manager/cluster-issuer-aks.yaml` — Controller-specific Issuer samples.
 - `values-security.yaml` — Opinionated security-first defaults (metrics protected, JSON logs sampled, strict egress, no public ingress).
 - `values-ingress-privacy.yaml` — Overlay to disable access logs on ingress and limit body size.
+- `values-ingress-allowlist.yaml` — Overlay to allow-list source CIDRs and enable basic auth with NGINX Ingress.
 
 ## Usage
 
@@ -38,6 +40,15 @@ helm upgrade --install oscillink deploy/helm/oscillink `
   --namespace <namespace> `
   --create-namespace `
   -f deploy/helm/oscillink/examples/values-private.yaml
+```
+
+Air‑gapped cluster (no egress; JWKS from Secret):
+
+```powershell
+helm upgrade --install oscillink deploy/helm/oscillink `
+  --namespace <namespace> `
+  --create-namespace `
+  -f deploy/helm/oscillink/examples/values-airgapped.yaml
 ```
 
 Proxy only (combine with your cluster preset values):

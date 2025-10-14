@@ -84,3 +84,11 @@ Response
 	"parent_ingest_sig": "hex64"
 }
 ```
+
+### Notes on k limits and benchmarks
+
+- /v1/chat enforces k ≤ 20 for focused answers; use /v1/query for larger contexts (≤ 100).
+- Recent benchmark artifacts are available under `_bench/`:
+	- `_bench/query_k60_c8.json` and `.csv` (k=60, concurrency=8)
+	- `_bench/query_k60_c1.json` and `.csv` (k=60, concurrency=1)
+	- `_bench/chat_k20_r100.json` (chat extractive)

@@ -70,6 +70,52 @@ def _sha256_file(path: str) -> str | None:
         return None
 
 
+def _heuristic_low_confidence_text(pages: list, min_chars: int, min_avg_len: float) -> bool:
+    """Very light-weight heuristic when OCR backend doesn't provide confidences.
+
+    Flags low confidence if total text is very small or average per-page length is tiny.
+    Deterministic and cheap; does not parse language.
+    """
+    try:
+        if not pages:
+            return True
+        total_chars = sum(len(getattr(p, "text", "")) for p in pages)
+        if total_chars < max(0, min_chars):
+            return True
+        avg_len = total_chars / max(1, len(pages))
+        return avg_len < max(0.0, min_avg_len)
+    except Exception:
+        return False
+
+
+def _aggregate_ocr_quality(ocr_results, *, conf_threshold: float | None, min_chars: int, min_avg_len: float) -> tuple[float | None, bool | None]:
+    """Compute aggregate OCR avg confidence and low-confidence flag from results.
+
+    Preference order:
+    - Use backend-provided avg_confidence when present (averaged deterministically across results).
+    - Otherwise, apply a deterministic heuristic based on text length density.
+    """
+    ocr_avg_conf: float | None = None
+    ocr_low_conf: bool | None = None
+    try:
+        for r in ocr_results:
+            if r.stats and r.stats.avg_confidence is not None:
+                if ocr_avg_conf is None:
+                    ocr_avg_conf = float(r.stats.avg_confidence)
+                else:
+                    ocr_avg_conf = (ocr_avg_conf + float(r.stats.avg_confidence)) / 2.0
+                if ocr_low_conf is None and conf_threshold is not None:
+                    ocr_low_conf = bool(float(r.stats.avg_confidence) < float(conf_threshold))
+            else:
+                if getattr(r.stats, "backend", "none") != "none":
+                    low_by_text = _heuristic_low_confidence_text(r.pages, min_chars=min_chars, min_avg_len=min_avg_len)
+                    if ocr_low_conf is None:
+                        ocr_low_conf = low_by_text
+        return ocr_avg_conf, ocr_low_conf
+    except Exception:
+        return ocr_avg_conf, ocr_low_conf
+
+
 def cmd_ingest(args: argparse.Namespace) -> int:
     # Minimal deterministic flow: extract -> ocr (no-op) -> chunk
     inputs = [args.input]
@@ -79,6 +125,12 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     pages = []
     for r in ocr_results:
         pages.extend(r.pages)
+    ocr_avg_conf, ocr_low_conf = _aggregate_ocr_quality(
+        ocr_results,
+        conf_threshold=getattr(args, "ocr_conf_threshold", None),
+        min_chars=int(getattr(args, "ocr_min_chars", 32)),
+        min_avg_len=float(getattr(args, "ocr_min_avg_len", 16.0)),
+    )
     # Select chunker with deterministic fallback
     if args.chunker == "unstructured":
         ch = chunk_unstructured(pages, ruleset=args.ruleset)
@@ -125,6 +177,11 @@ def cmd_ingest(args: argparse.Namespace) -> int:
         embed_tokenizer_sha256=getattr(getattr(model, "spec", None), "sha256_tokenizer", None),
         deterministic=bool(args.deterministic),
         determinism_env=det_env,
+        extract_parser=str(args.extract_parser),
+        ocr_backend=str(args.ocr_backend),
+        ocr_langs=str(args.ocr_langs),
+        ocr_avg_confidence=ocr_avg_conf,
+        ocr_low_confidence=ocr_low_conf,
     )
     # Persist sidecar next to index for provenance chaining
     try:
@@ -218,6 +275,9 @@ def build_parser() -> argparse.ArgumentParser:
     pi.add_argument("--tika-url", default=None)
     pi.add_argument("--ocr-backend", default="ocrmypdf")
     pi.add_argument("--ocr-langs", default="eng")
+    pi.add_argument("--ocr-conf-threshold", type=float, default=None, help="Optional threshold in [0,1] to flag low OCR confidence when backend reports it")
+    pi.add_argument("--ocr-min-chars", type=int, default=32, help="Heuristic: flag low confidence if total OCR text chars < this value")
+    pi.add_argument("--ocr-min-avg-len", type=float, default=16.0, help="Heuristic: flag low confidence if avg per-page chars < this value")
     pi.add_argument("--chunker", choices=["paragraph", "unstructured"], default="unstructured")
     pi.add_argument("--ruleset", default="default")
     pi.add_argument("--embed-model", default="bge-small-en-v1.5")

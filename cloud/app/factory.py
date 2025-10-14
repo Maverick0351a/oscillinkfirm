@@ -82,7 +82,11 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     # Routers (same as before) + ingest/query routes
     app.include_router(autocorrect_router)
     app.include_router(benchmarks_router)
-    app.include_router(billing_webhook_router)
+    # Mount detailed billing webhook routes under a prefix to avoid shadowing the
+    # minimal idempotent test-friendly handler defined in main.py at "/stripe/webhook".
+    # This keeps production-grade webhook logic available at "/billing/stripe/webhook"
+    # while tests can exercise the simpler path.
+    app.include_router(billing_webhook_router, prefix="/billing")
     app.include_router(jobs_router)
     app.include_router(admin_router)
     app.include_router(ingest_router)

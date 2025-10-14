@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  query:
+    # Local dev bench image; builds from repo root Dockerfile
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: oscillink_local:bench
+    entrypoint: ["uvicorn"]
+    command: ["examples.query_server:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]
+    environment:
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+    ports:
+      - "8082:8080"
+    volumes:
+      - ../_tmp_demo:/data
+      - ../models_registry.json:/app/models_registry.json

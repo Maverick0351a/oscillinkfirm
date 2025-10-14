@@ -4,6 +4,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from oscillink.ingest.query_service import query_index
@@ -15,7 +16,8 @@ class ChatRequest(BaseModel):
     index_path: str = Field(...)
     q: str = Field(..., description="User prompt/question")
     backend: str = Field("jsonl")
-    k: int = Field(5, ge=1, le=20)
+    # Allow up to 100 here, but enforce chat-specific cap (20) in handler for a friendlier message.
+    k: int = Field(5, ge=1, le=100, description="For /v1/chat, an effective cap of 20 is enforced. Use /v1/query for larger k (<=100).")
     embed_model: str = Field("bge-small-en-v1.5")
     meta_path: Optional[str] = None
     epsilon: float = Field(1e-3, ge=0.0)
@@ -148,6 +150,12 @@ def _to_citations(items: List[dict]) -> List[dict]:
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> Dict[str, Any]:
+    # Enforce chat-specific k bound with a helpful message
+    if req.k > 20:
+        return JSONResponse(
+            {"error": "k>20 not allowed on /v1/chat. Choose k <= 20, or use /v1/query for larger contexts."},
+            status_code=422,
+        )
     # Normalize backend flag to support variants like "faiss:hnsw"
     backend_flag = req.backend.split(":", 1)[0]
     req.backend = backend_flag if backend_flag in {"jsonl", "faiss"} else "jsonl"

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Header
@@ -32,6 +33,34 @@ def api_ingest(
     require_license(x_license_key)
     ex = extract_text([input_path])
     ocr = ocr_if_needed(ex)
+    # Aggregate OCR quality
+    ocr_avg_conf: float | None = None
+    ocr_low_conf: bool | None = None
+    try:
+        total_chars = 0
+        page_count = 0
+        for r in ocr:
+            # backend-provided confidence preferred
+            if getattr(r, "stats", None) and r.stats.avg_confidence is not None:
+                if ocr_avg_conf is None:
+                    ocr_avg_conf = float(r.stats.avg_confidence)
+                else:
+                    ocr_avg_conf = (ocr_avg_conf + float(r.stats.avg_confidence)) / 2.0
+            # accumulate for heuristic
+            for p in r.pages:
+                total_chars += len(getattr(p, "text", ""))
+                page_count += 1
+        # If backend didn’t report, derive simple heuristic
+        if ocr_avg_conf is None:
+            # conservative static defaults; can be made configurable later
+            low_by_text = (total_chars < 32) or ((total_chars / max(1, page_count)) < 16.0)
+            ocr_low_conf = low_by_text
+        else:
+            # Threshold default 0.70; tune in operations
+            ocr_low_conf = bool(ocr_avg_conf < 0.70)
+    except Exception:
+        ocr_avg_conf = None
+        ocr_low_conf = None
     pages = [p for r in ocr for p in r.pages]
     ch = chunk_paragraphs(pages)
     model = load_embedding_model(embed_model)
@@ -51,6 +80,11 @@ def api_ingest(
         "embed_weights_sha256": getattr(getattr(model, "spec", None), "sha256_weights", None),
         "deterministic": bool(det),
         "determinism_env": det_env,
+        "extract_parser": "auto",
+        "ocr_backend": "ocrmypdf",
+        "ocr_langs": "eng",
+        "ocr_avg_confidence": ocr_avg_conf,
+        "ocr_low_confidence": ocr_low_conf,
     }
     # Attach a stable signature for provenance (JSON of core fields)
     try:
@@ -78,7 +112,18 @@ def api_ingest(
         save_ingest_receipt(idx.index_path, ingest_receipt)
     except Exception:
         pass
-    return {"ingest_receipt": ingest_receipt}
+    # Emit a lightweight JSON log for OCR quality
+    try:
+        log = {
+            "event": "ocr_quality",
+            "file": input_path,
+            "avg_conf": ocr_avg_conf,
+            "low_conf": ocr_low_conf,
+        }
+        sys.stderr.write(str(log) + "\n")
+    except Exception:
+        pass
+    return {"ingest_receipt": ingest_receipt, "ocr_low_confidence": ingest_receipt.get("ocr_low_confidence"), "ocr_avg_confidence": ingest_receipt.get("ocr_avg_confidence")}
 
 
 @router.post("/query")
@@ -133,4 +178,7 @@ def api_query(
     out = {"bundle": bundle, "settle_receipt": receipt, "parent_ingest_sig": parent_ingest_sig}
     if ingest_sidecar is not None:
         out["ingest_receipt"] = ingest_sidecar
+        # Surface OCR quality flags at top-level for UI
+        out["ocr_low_confidence"] = ingest_sidecar.get("ocr_low_confidence")
+        out["ocr_avg_confidence"] = ingest_sidecar.get("ocr_avg_confidence")
     return out

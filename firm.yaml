@@ -1,0 +1,26 @@
+# Oscillink Firm — Quality & Governance Settings
+
+quality:
+  ocr:
+    conf_threshold: 0.70         # 0..1; below this ⇒ low-confidence OCR
+    min_chars: 64                # heuristic floor if confidences are missing
+    min_avg_len: 20.0            # heuristic avg length per page if confidences are missing
+    score_penalty: 0.08          # retrieval penalty for flagged docs (JSONL+FAISS)
+    abstain_on_all_low: true     # if all top-K flagged & ΔH < ε ⇒ abstain(reason=low-quality OCR)
+
+retrieval:
+  k: 60
+  epsilon: 0.001                 # ΔH threshold for coherence
+  tau: 0.30                      # score threshold for top doc
+
+llm:
+  enabled: false                 # extractive by default
+  base_url: http://127.0.0.1:11434/v1
+  api_key: sk-local
+  model: my-local-model
+
+paths:
+  docs_dir: ./data/docs
+  index_dir: ./data/index
+  receipts_dir: ./data/receipts
+  reports_dir: ./data/reports

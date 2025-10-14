@@ -16,6 +16,7 @@ resources:
     memory: "2Gi"
 
 env:
+  # For air-gapped clusters, override to file:///run/secrets/jwks.json
   OSCILLINK_JWKS_URL: https://license.oscillink.com/.well-known/jwks.json
   OSCILLINK_TELEMETRY: minimal
   # Licensed container defaults
@@ -24,6 +25,9 @@ env:
   OSCILLINK_ENTITLEMENTS_PATH: /run/oscillink_entitlements.json
   # Protect /metrics with admin secret by default (set OSCILLINK_ADMIN_SECRET via Secret)
   OSCILLINK_METRICS_PROTECTED: "1"
+
+# Additional environment variables (list of name/value)
+extraEnv: []
 
 # Optional: reference a Secret that contains sensitive env vars (e.g., OSCILLINK_ADMIN_SECRET)
 # The Secret keys will be exposed as envs. Example:
@@ -34,6 +38,11 @@ secretMounts:
   - name: license
     mountPath: /run/secrets
     secretName: oscillink-license
+
+serviceAccount:
+  create: true
+  name: ""
+  automountServiceAccountToken: false
 
 ingress:
   enabled: false
@@ -71,3 +80,9 @@ hpa:
   memory:
     enabled: false
     targetAverageUtilization: 80
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 5s
+  additionalLabels: {}
