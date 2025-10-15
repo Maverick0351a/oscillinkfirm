@@ -474,3 +474,29 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8080/license/status" | ConvertTo-Json -
 ```
 
 <!-- Pruned legacy duplication below -->
+
+## Laptop demos: offline CPU LLM sidecar
+
+For many no-cloud laptop demos, ship a tiny CPU-friendly LLM next to the API. We provide a compose file that runs a llama.cpp server exposing OpenAI-compatible routes.
+
+- Compose file: `deploy/docker-compose.cpu.yml`
+- Models folder: `./models` (bind-mounted; place a GGUF here)
+- Default pick: Phi-3-mini-4k-instruct (GGUF Q4_K_M)
+
+Quickstart:
+
+```powershell
+# Pre-seed model file under .\models\phi3-mini.Q4_K_M.gguf
+docker compose -f deploy/docker-compose.cpu.yml up -d
+curl http://127.0.0.1:8080/health
+curl http://127.0.0.1:8001/v1/models
+```
+
+Config knobs (env → firm.yaml):
+
+- `OSCILLINK_LLM_ENABLED` (llm.enabled)
+- `OSCILLINK_LLM_BASE_URL` (llm.base_url)
+- `OSCILLINK_LLM_API_KEY` (llm.api_key)
+- `OSCILLINK_LLM_MODEL` (llm.model)
+
+Optional fully self-contained LLM image: see `deploy/Dockerfile.llm` to COPY a GGUF inside the image for zero external mounts (larger image, easier workshops).

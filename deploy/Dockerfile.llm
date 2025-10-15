@@ -1,0 +1,8 @@
+# Optional: self-contained LLM image that bundles a GGUF model
+FROM ghcr.io/ggerganov/llama.cpp:server
+
+# Copy pre-downloaded model into the image
+COPY models/phi3-mini.Q4_K_M.gguf /models/phi3-mini.Q4_K_M.gguf
+
+# Expose OpenAI-compatible API on 8001
+CMD ["--host","0.0.0.0","--port","8001","--api","--model","/models/phi3-mini.Q4_K_M.gguf","--ctx-size","4096","--threads","6"]

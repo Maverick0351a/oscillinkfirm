@@ -1,0 +1,30 @@
+version: "3.9"
+services:
+  firm-api:
+    image: ghcr.io/you/oscillink-firm:rc
+    environment:
+      OSCILLINK_LLM_ENABLED: "true"
+      OSCILLINK_LLM_BASE_URL: "http://llm:8001/v1"
+      OSCILLINK_LLM_API_KEY: "sk-local"
+      OSCILLINK_LLM_MODEL: "phi3-mini"
+    volumes:
+      - ./data:/data
+      - ./config:/config:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - llm
+
+  llm:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    command: >
+      --host 0.0.0.0
+      --port 8001
+      --api
+      --model /models/phi3-mini.Q4_K_M.gguf
+      --ctx-size 4096
+      --threads 6
+    volumes:
+      - ./models:/models:ro
+    expose:
+      - "8001"
