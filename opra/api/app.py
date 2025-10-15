@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.watcher import Watcher
@@ -11,7 +12,30 @@ from .routers import ingest as ingest_router
 from .routers import query as query_router
 from .routers import report as report_router
 
-app = FastAPI(title="OPRA API", version="0.1.0")
+watcher: Watcher | None = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global watcher
+    # Default watcher off unless explicitly enabled
+    if os.getenv("OPRA_WATCHER", "0") not in {"0", "false", "False"}:  # enable only if set
+        watcher = Watcher(
+            docs_dir=os.getenv("OPRA_DOCS_DIR"),
+            index_dir=os.getenv("OPRA_INDEX_DIR"),
+            receipts_dir=os.getenv("OPRA_RECEIPTS_DIR"),
+            embed_model=os.getenv("OPRA_EMBED_MODEL", "bge-small-en-v1.5"),
+            interval_sec=float(os.getenv("OPRA_WATCH_INTERVAL", "2.0")),
+        )
+        watcher.start()
+    try:
+        yield
+    finally:
+        if watcher:
+            watcher.stop()
+
+
+app = FastAPI(title="OPRA API", version="0.1.0", lifespan=lifespan)
 
 @app.get("/health")
 def health():
@@ -36,28 +60,7 @@ app.add_middleware(
 )
 
 
-# Background watcher: start if enabled via env
-watcher: Watcher | None = None
-
-@app.on_event("startup")
-def _on_startup() -> None:
-    global watcher
-    if os.getenv("OPRA_WATCHER", "1") not in {"0", "false", "False"}:
-        watcher = Watcher(
-            docs_dir=os.getenv("OPRA_DOCS_DIR"),
-            index_dir=os.getenv("OPRA_INDEX_DIR"),
-            receipts_dir=os.getenv("OPRA_RECEIPTS_DIR"),
-            embed_model=os.getenv("OPRA_EMBED_MODEL", "bge-small-en-v1.5"),
-            interval_sec=float(os.getenv("OPRA_WATCH_INTERVAL", "2.0")),
-        )
-        watcher.start()
-
-
-@app.on_event("shutdown")
-def _on_shutdown() -> None:
-    global watcher
-    if watcher:
-        watcher.stop()
+# Background watcher handled by lifespan
 
 
 @app.get("/v1/watcher/status")

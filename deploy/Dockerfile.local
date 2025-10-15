@@ -1,0 +1,31 @@
+# Slim local container for OPRA API only
+# Builds with minimal extras and no GPU stack
+
+FROM python:3.11-slim
+
+ENV PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# System deps minimal
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy only manifests first for better layer caching
+COPY pyproject.toml README.md /app/
+COPY opra /app/opra
+COPY oscillink /app/oscillink
+
+# Install project with local minimal extras
+RUN pip install --upgrade pip setuptools wheel \
+ && pip install -e .[local]
+
+EXPOSE 8080
+ENV OPRA_WATCHER=0 \
+    UVICORN_HOST=0.0.0.0 \
+    UVICORN_PORT=8080
+
+CMD ["python", "-m", "uvicorn", "opra.api.app:app", "--host", "0.0.0.0", "--port", "8080"]

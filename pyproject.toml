@@ -101,8 +101,15 @@ cloud-all = [
   "google-cloud-firestore>=2.16"
 ]
 
+local = [
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+  "orjson>=3.9",
+  "python-multipart>=0.0.6",
+  "prometheus-client>=0.20"
+]
 [tool.setuptools.packages.find]
-include = ["oscillink*", "cloud*"]
+include = ["oscillink*", "cloud*", "opra*"]
 
 [tool.setuptools.package-data]
 oscillink = [

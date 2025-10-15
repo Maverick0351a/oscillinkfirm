@@ -500,3 +500,28 @@ Config knobs (env → firm.yaml):
 - `OSCILLINK_LLM_MODEL` (llm.model)
 
 Optional fully self-contained LLM image: see `deploy/Dockerfile.llm` to COPY a GGUF inside the image for zero external mounts (larger image, easier workshops).
+
+## Local container: OPRA API only
+
+Run a slim container for the OPRA API with minimal dependencies and deterministic defaults.
+
+- Dockerfile: `deploy/Dockerfile.local`
+- Compose: `deploy/docker-compose.local.yml`
+
+Quickstart:
+
+```powershell
+docker compose -f deploy/docker-compose.local.yml up --build -d
+curl http://127.0.0.1:8080/health
+```
+
+OpenAPI (served in-process by FastAPI):
+
+```powershell
+curl http://127.0.0.1:8080/openapi.json | Out-Null
+```
+
+Notes:
+- Binds `./data` into `/data` for docs/index/receipts.
+- Background watcher is OFF by default; set `OPRA_WATCHER=1` in compose to enable.
+- Uses the new `[local]` extra for a minimal runtime footprint.
